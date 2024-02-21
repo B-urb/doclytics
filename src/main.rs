@@ -66,7 +66,10 @@ async fn get_data_from_paperless(
     // Read token from environment
     let token = env::var("TOKEN").expect("TOKEN is not set in .env file");
 
-    let response = client.get(format!("{}/api/documents/", url)).send().await?;
+    //Define filter string
+    let filter = "NOT tagged=true".to_string();
+
+    let response = client.get(format!("{}/api/documents/?query={}", url, filter)).send().await?;
     let body = response.text().await?;
 
     // Remove the "Document content: " prefix
@@ -217,7 +220,7 @@ async fn update_document_fields(
     if let Some(value) = metadata.get("title").and_then(|v| v.as_ref().and_then(|v| v.as_str())) {
         payload.insert("title".to_string(), serde_json::json!(value));
     }
-    let url = format!("{}/documents/{}/", base_url, document_id);
+    let url = format!("{}/api/documents/{}/", base_url, document_id);
     let res = client.patch(&url).json(&payload).send().await?;
     let body = res.text().await?;
     println!("{}", body);
