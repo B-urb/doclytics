@@ -1,8 +1,9 @@
-# Project Name
+# Doclytics
 
 ## Description
 
-This is a Rust project that interacts with an API to fetch and update documents. It uses the `reqwest` library to make HTTP requests and `serde_json` for JSON serialization and deserialization.
+This is a Rust project that interacts with the paperless-ngx API to fetch and update documents. The goal is to utilize local llms, in this case ollama, to generate metadata for the documents in your paperless document library.
+It uses the `reqwest` library to make HTTP requests and `serde_json` for JSON serialization and deserialization, as well as ollama_rs
 
 ## Setup
 
@@ -10,7 +11,7 @@ This is a Rust project that interacts with an API to fetch and update documents.
 
 2. Clone the repository: `git clone https://github.com/yourusername/yourrepository.git`
 
-3. Navigate to the project directory: `cd yourrepository`
+3. Navigate to the project directory: `cd doclytics`
 
 4. Build the project: `cargo build`
 
