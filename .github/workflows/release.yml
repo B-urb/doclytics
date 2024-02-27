@@ -93,35 +93,3 @@ jobs:
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/doclytics:${{ env.BRANCH_NAME }}
           platforms: linux/amd64,linux/arm64
-      - name: Upload macOS Binary
-        uses: actions/upload-release-asset@v1
-        if: steps.semantic-release.outputs.release_created == 'true'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.semantic-release.outputs.release_upload_url }}
-          asset_path: ./target/x86_64-apple-darwin/release/your-binary
-          asset_name: your-binary-macos
-          asset_content_type: application/octet-stream
-
-      - name: Upload Windows Binary
-        uses: actions/upload-release-asset@v1
-        if: steps.semantic-release.outputs.release_created == 'true'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.semantic-release.outputs.release_upload_url }}
-          asset_path: ./target/x86_64-pc-windows-msvc/release/your-binary.exe
-          asset_name: your-binary-windows.exe
-          asset_content_type: application/octet-stream
-
-      - name: Upload Linux Binary
-        uses: actions/upload-release-asset@v1
-        if: steps.semantic-release.outputs.release_created == 'true'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.semantic-release.outputs.release_upload_url }}
-          asset_path: ./target/x86_64-unknown-linux-gnu/release/your-binary
-          asset_name: your-binary-linux
-          asset_content_type: application/octet-stream
