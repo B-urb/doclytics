@@ -9,59 +9,6 @@ env:
   CI: true
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    environment: production
-    strategy:
-      matrix:
-        go-version: [ '1.22' ]
-        node-version: [ 18 ]
-        goarch: [ 'amd64', 'arm64' ]  # Define architectures here
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Setup Go ${{ matrix.go-version }}
-        uses: actions/setup-go@v5
-        with:
-          go-version: ${{ matrix.go-version }}
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.node-version }}
-      - name: Cache node modules
-        uses: actions/cache@v4
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-      - name: Install dependencies
-        working-directory: frontend
-        run: npm ci
-      - name: Build
-        working-directory: frontend
-        run: npm run build
-      - name: Install ARM64 cross-compiler
-        run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
-      - name: Install dependencies
-        working-directory: backend
-        run: go get ./...
-      - name: Set up CC for cross-compilation
-        if: matrix.goarch == 'arm64'
-        run: echo "CC=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
-      - name: Build
-        working-directory: backend
-        run: |
-          GOOS=linux  GOARCH=${{ matrix.goarch }} CGO_ENABLED=1 go build -o build/doclytics-${{ matrix.goarch }} ./cmd/doclytics
-      #- name: Test with the Go CLI
-      #  run: go test
-      - name: Archive production artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: production-artifacts
-          path: |
-            backend/
-            frontend/public
   build-docker:
     needs: build
     runs-on: ubuntu-latest
