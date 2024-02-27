@@ -48,13 +48,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.PAT }}
           BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
         run: |
-          release_id=$(curl -H "Authorization: token $GITHUB_TOKEN" \
-            https://api.github.com/repos/${{ github.repository }}/releases/tags/${BRANCH_NAME} \
-            | jq '.id')
           upload_url=$(curl -H "Authorization: token $GITHUB_TOKEN" \
-            https://api.github.com/repos/${{ github.repository }}/releases/${release_id} \
-            | jq -r .upload_url)
-          echo "UPLOAD_URL=${upload_url}" >> $GITHUB_OUTPUT
+            https://api.github.com/repos/${{ github.repository }}/releases/tags/${BRANCH_NAME} \
+            | jq '.upload_url')
+          echo ${upload_url}
+          echo "{UPLOAD_URL}={upload_url}" >> $GITHUB_OUTPUT
       - name: Upload Asset
         env:
           GITHUB_TOKEN: ${{ secrets.PAT }}
