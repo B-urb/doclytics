@@ -135,9 +135,9 @@ async fn generate_response(
 }
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let base_url = std::env::var("BASE_URL").unwrap();
+    let base_url = std::env::var("PAPERLESS_BASE_URL").unwrap();
 
-    let token = env::var("TOKEN").expect("TOKEN is not set in .env file");
+    let token = env::var("PAPERLESS_TOKEN").expect("TOKEN is not set in .env file");
     // Create HeaderMap and add Authorization header
     let mut headers = HeaderMap::new();
     let header_value = HeaderValue::from_str(&format!("Token {}", token)).unwrap();
