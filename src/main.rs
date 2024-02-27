@@ -84,7 +84,8 @@ fn init_ollama_client(host: &str, port: u16, secure_endpoint: bool) -> Ollama {
 
 // Refactor the main process into a function for better readability
 async fn process_documents(client: &Client, ollama: &Ollama, model: &str, base_url: &str) -> Result<(), Box<dyn std::error::Error>> {
-    let prompt_base= env::var("BASE_PROMPT").unwrap_or_else(|_| "Please extract metadata from the provided document and return it in JSON format.\
+    let prompt_base= env::var("BASE_PROMPT").unwrap_or_else(|_| "Please extract metadata\
+     from the provided document and return it in JSON format.\
      The fields I need are:\
       title,topic,sender,recipient,urgency(with value either n/a or low or medium or high),\
       date_received,category.\

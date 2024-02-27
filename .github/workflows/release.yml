@@ -34,38 +34,15 @@ jobs:
         run: cargo build --release --target ${{ matrix.target }}
       - name: Upload artifact
         uses: actions/upload-artifact@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ github.ref }} # Assumes the tag name is the same as the ref. Adjust if necessary.
+          BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
         with:
           name: doclytics-${{ env.BRANCH_NAME }}-${{ matrix.os }}
           path: |
             ./target/${{ matrix.target }}/release/doclytics${{ matrix.os == 'windows-latest' && '.exe' || '' }}
-      - name: Get Release Upload URL
-        id: get_upload_url
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG_NAME: ${{ github.ref }} # Assumes the tag name is the same as the ref. Adjust if necessary.
-        run: |
-          release_id=$(curl -H "Authorization: token $GITHUB_TOKEN" \
-            https://api.github.com/repos/${{ github.repository }}/releases/tags/${TAG_NAME} \
-            | jq '.id')
-          
-          upload_url=$(curl -H "Authorization: token $GITHUB_TOKEN" \
-            https://api.github.com/repos/${{ github.repository }}/releases/${release_id} \
-            | jq -r .upload_url)
-          
-          echo "::set-output name=upload_url::${upload_url}"
-      - name: Upload Asset
-        env:
-          GITHUB_TOKEN: ${{ secrets.PAT }}
-          UPLOAD_URL: ${{ steps.create_release.outputs.upload_url }} # Assuming this is set by a previous step
-          ASSET_PATH: ./target/${{ matrix.target }}/release/doclytics${{ matrix.os == 'windows-latest' && '.exe' || '' }}
-          ASSET_NAME: doclytics-${{ env.BRANCH_NAME }}-${{ matrix.os }}
-        run: |
-          curl \
-          -X POST \
-          -H "Authorization: token $GITHUB_TOKEN" \
-          -H "Content-Type: application/zip" \
-          --data-binary @$ASSET_PATH \
-          "${UPLOAD_URL}?name=${ASSET_NAME}&label=${ASSET_NAME}"
+
   build-docker:
     runs-on: ubuntu-latest
     if: ${{ github.ref }} != 'master' && ${{ github.ref }} != 'development'
@@ -93,35 +70,3 @@ jobs:
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/doclytics:${{ env.BRANCH_NAME }}
           platforms: linux/amd64,linux/arm64
-      - name: Upload macOS Binary
-        uses: actions/upload-release-asset@v1
-        if: steps.semantic-release.outputs.release_created == 'true'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.semantic-release.outputs.release_upload_url }}
-          asset_path: ./target/x86_64-apple-darwin/release/your-binary
-          asset_name: your-binary-macos
-          asset_content_type: application/octet-stream
-
-      - name: Upload Windows Binary
-        uses: actions/upload-release-asset@v1
-        if: steps.semantic-release.outputs.release_created == 'true'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.semantic-release.outputs.release_upload_url }}
-          asset_path: ./target/x86_64-pc-windows-msvc/release/your-binary.exe
-          asset_name: your-binary-windows.exe
-          asset_content_type: application/octet-stream
-
-      - name: Upload Linux Binary
-        uses: actions/upload-release-asset@v1
-        if: steps.semantic-release.outputs.release_created == 'true'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.semantic-release.outputs.release_upload_url }}
-          asset_path: ./target/x86_64-unknown-linux-gnu/release/your-binary
-          asset_name: your-binary-linux
-          asset_content_type: application/octet-stream

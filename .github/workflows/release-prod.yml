@@ -38,17 +38,27 @@ jobs:
           name: doclytics-${{ env.BRANCH_NAME }}-${{ matrix.os }}
           path: |
             ./target/${{ matrix.target }}/release/doclytics${{ matrix.os == 'windows-latest' && '.exe' || '' }}
-      - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
-        if: ${{ github.ref }} != 'master' && ${{ github.ref }} != 'development'
+      - name: Get Release Upload URL
+        id: get_upload_url
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.PAT }}
           BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./target/${{ matrix.target }}/release/doclytics${{ matrix.os == 'windows-latest' && '.exe' || '' }}
-          asset_name: doclytics-${{ env.BRANCH_NAME }}-${{ matrix.os }}
-          asset_content_type: application/octet-stream}
+        shell: bash
+        run: |
+          upload_url=$(curl -H "Authorization: token $GITHUB_TOKEN" \
+                https://api.github.com/repos/${{ github.repository }}/releases/tags/${BRANCH_NAME} \
+                | jq -r '.upload_url' | sed 's/{?name,label}//')
+          echo "UPLOAD_URL=${upload_url}" >> $GITHUB_OUTPUT
+      - name: Upload Asset
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT }}
+          ASSET_PATH: ./target/${{ matrix.target }}/release/doclytics${{ matrix.os == 'windows-latest' && '.exe' || '' }}
+          ASSET_NAME: doclytics-${{ env.BRANCH_NAME }}-${{ matrix.os }}
+          UPLOAD_URL: ${{ steps.get_upload_url.outputs.UPLOAD_URL }}
+          BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+        run: |
+          curl -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Content-Type: application/zip" --data-binary @$ASSET_PATH "${UPLOAD_URL}?name=${ASSET_NAME}&label=${ASSET_NAME}"
   build-docker:
     needs: build
     runs-on: ubuntu-latest
