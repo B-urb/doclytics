@@ -44,14 +44,16 @@ With these prerequisites met, you are now ready to proceed with the installation
 
 The application requires setting environment variables for its configuration. Below is a table describing each environment variable, indicating whether it is required or optional, its default value (if any), and a brief description:
 
-| Environment Variable       | Required | Default Value   | Description                                                  |
-|----------------------------|----------|-----------------|--------------------------------------------------------------|
-| `PAPERLESS_TOKEN`          | Yes      | None            | The authentication token for accessing the Paperless API.    |
-| `PAPERLESS_BASE_URL`       | Yes      | None            | The base URL for the Paperless API.                          |
-| `OLLAMA_HOST`              | No       | "localhost"     | The hostname where the Ollama service is running.            |
-| `OLLAMA_PORT`              | No       | "11434"         | The port on which the Ollama service is accessible.          |
-| `OLLAMA_SECURE_ENDPOINT`   | No       | "false"         | Whether to use HTTPS (`true`) or HTTP (`false`) for Ollama.  |
-| `OLLAMA_MODEL`             | No       | "llama2:13b"    | The specific Ollama model to be used for processing.         |
+| Environment Variable     | Required | Default Value                | Description                                                                                                                     |
+|--------------------------|----------|------------------------------|---------------------------------------------------------------------------------------------------------------------------------|
+| `PAPERLESS_TOKEN`        | Yes      | None                         | The authentication token for accessing the Paperless API.                                                                       |
+| `PAPERLESS_BASE_URL`     | Yes      | None                         | The base URL for the Paperless API.                                                                                             |
+| `OLLAMA_HOST`            | No       | "localhost"                  | The hostname where the Ollama service is running.                                                                               |
+| `OLLAMA_PORT`            | No       | "11434"                      | The port on which the Ollama service is accessible.                                                                             |
+| `OLLAMA_SECURE_ENDPOINT` | No       | "false"                      | Whether to use HTTPS (`true`) or HTTP (`false`) for Ollama.                                                                     |
+| `OLLAMA_MODEL`           | No       | "llama2:13b"                 | The specific Ollama model to be used for processing.                                                                            |
+| `BASE_PROMPT`            | No       | see [Example Prompt](example/example.prompt) | Prompt given to the model, for requesting metadata.<br/> Should contain the custom fields in paperless that you want doclytics. |
+
 
 Make sure to set the required environment variables (`PAPERLESS_TOKEN` and `PAPERLESS_BASE_URL`) before running the application. Optional variables have default values and will use those defaults if not explicitly set.
 For Development these should be defined in a `.env` file located at the root of your project directory.
@@ -96,7 +98,14 @@ Ensure to replace `http://your-paperless-instance` and `yourapitoken` with your 
 
 ## Usage
 
-Doclytics is designed to automate the enrichment of document metadata using language model insights. After setup, it fetches documents from the configured Paperless instance, processes them through Ollama to generate metadata, and updates the document entries in Paperless with this new metadata.
+Doclytics uses the custom field `tagged` to query documents not yet analyzed from your paperless instance. 
+You can pass a prompt like this [Example Prompt](example/example.prompt) to generate metadata. Json is automatically extracted
+from the LLM's answer, however it is recommended to explicitly specify that you want json returned, especially for smaller
+models or else you might not get any parseable json back at all. 
+
+If you want to explicitly reanalyze a specific document, the easiest way would be to set the `tagged` custom field to 
+false in the UI.
+
 
 ## Contributing
 
