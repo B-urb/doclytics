@@ -93,10 +93,6 @@ Ensure to replace `http://your-paperless-instance` and `yourapitoken` with your 
 > [!IMPORTANT]
 > When using `ollama serve` on the host system, please ensure you set the `OLLAMA_HOST` environment variable to `host.docker.internal`. This setting is crucial for proper communication between your containerized application and the Ollama service running on the host.
 
-```bash
-export OLLAMA_HOST=host.docker.internal
-
-
 
 ## Usage
 
