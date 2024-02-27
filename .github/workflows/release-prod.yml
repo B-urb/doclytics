@@ -9,6 +9,46 @@ env:
   CI: true
 
 jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: macos-latest
+            target: x86_64-apple-darwin
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: ${{ matrix.target }}
+          profile: minimal
+          override: true
+      - name: Build
+        run: cargo build --release --target ${{ matrix.target }}
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: doclytics-${{ env.BRANCH_NAME }}-${{ matrix.os }}
+          path: |
+            ./target/${{ matrix.target }}/release/doclytics${{ matrix.os == 'windows-latest' && '.exe' || '' }}
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        if: ${{ github.ref }} != 'master' && ${{ github.ref }} != 'development'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./target/${{ matrix.target }}/release/doclytics${{ matrix.os == 'windows-latest' && '.exe' || '' }}
+          asset_name: doclytics-${{ env.BRANCH_NAME }}-${{ matrix.os }}
+          asset_content_type: application/octet-stream}
   build-docker:
     needs: build
     runs-on: ubuntu-latest

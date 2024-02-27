@@ -17,6 +17,8 @@ permissions:
 jobs:
   build:
     runs-on: ${{ matrix.os }}
+    env:
+      BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
@@ -38,10 +40,15 @@ jobs:
           override: true
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: doclytics-${{ env.BRANCH_NAME }}-${{ matrix.os }}
+          path: |
+           ./target/${{ matrix.target }}/release/doclytics${{ matrix.os == 'windows-latest' && '.exe' || '' }}
   build-docker:
     needs: build
     runs-on: ubuntu-latest
-    if: ${{ github.ref }} != 'master' && ${{ github.ref }} != 'development'
     env:
       BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
     steps:
@@ -68,7 +75,7 @@ jobs:
       contents: write
       issues: write
       pull-requests: write
-    if: false #${{ github.ref }} == 'master' || ${{ github.ref }} == 'development'
+    if: ${{ github.ref }} == 'master' || ${{ github.ref }} == 'development'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
