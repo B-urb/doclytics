@@ -1,0 +1,37 @@
+# Ignore git and version control
+.git
+.gitignore
+.svn
+.cvsignore
+
+# Ignore build and log files
+build/
+logs/
+tmp/
+
+# Ignore testing and benchmarking artifacts
+tests/
+benchmarks/
+
+# Ignore Dockerfile and .dockerignore to reduce context size
+Dockerfile
+.dockerignore
+
+# Ignore dependency directories (language and framework-specific)
+node_modules/
+vendor/
+.env
+
+# Ignore IDE and editor directories
+.idea/
+*.swp
+*.swo
+.vscode/
+
+# Ignore user-specific files
+.DS_Store
+*.log
+
+# Ignore sensitive files
+secrets.yml
+config/credentials.yml.enc
