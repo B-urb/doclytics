@@ -42,12 +42,19 @@ With these prerequisites met, you are now ready to proceed with the installation
 
 ## Environment Variables
 
-The project requires setting certain environment variables for its operation:
+The application requires setting environment variables for its configuration. Below is a table describing each environment variable, indicating whether it is required or optional, its default value (if any), and a brief description:
 
-- `PAPERLESS_BASE_URL`: The base URL for your Paperless instance.
-- `PAPERLESS_TOKEN`: The API token used for authenticating against the Paperless API.
+| Environment Variable       | Required | Default Value   | Description                                                  |
+|----------------------------|----------|-----------------|--------------------------------------------------------------|
+| `PAPERLESS_TOKEN`          | Yes      | None            | The authentication token for accessing the Paperless API.    |
+| `PAPERLESS_BASE_URL`       | Yes      | None            | The base URL for the Paperless API.                          |
+| `OLLAMA_HOST`              | No       | "localhost"     | The hostname where the Ollama service is running.            |
+| `OLLAMA_PORT`              | No       | "11434"         | The port on which the Ollama service is accessible.          |
+| `OLLAMA_SECURE_ENDPOINT`   | No       | "false"         | Whether to use HTTPS (`true`) or HTTP (`false`) for Ollama.  |
+| `OLLAMA_MODEL`             | No       | "llama2:13b"    | The specific Ollama model to be used for processing.         |
 
-These should be defined in a `.env` file located at the root of your project directory.
+Make sure to set the required environment variables (`PAPERLESS_TOKEN` and `PAPERLESS_BASE_URL`) before running the application. Optional variables have default values and will use those defaults if not explicitly set.
+For Development these should be defined in a `.env` file located at the root of your project directory.
 
 ## Docker Integration
 
