@@ -48,16 +48,13 @@ jobs:
           release_id=$(curl -H "Authorization: token $GITHUB_TOKEN" \
             https://api.github.com/repos/${{ github.repository }}/releases/tags/${TAG_NAME} \
             | jq '.id')
-          
           upload_url=$(curl -H "Authorization: token $GITHUB_TOKEN" \
             https://api.github.com/repos/${{ github.repository }}/releases/${release_id} \
             | jq -r .upload_url)
-          
-          echo "::set-output name=upload_url::${upload_url}"
+          echo "UPLOAD_URL=${upload_url}" >> $GITHUB_OUTPUT
       - name: Upload Asset
         env:
           GITHUB_TOKEN: ${{ secrets.PAT }}
-          UPLOAD_URL: ${{ steps.create_release.outputs.upload_url }} # Assuming this is set by a previous step
           ASSET_PATH: ./target/${{ matrix.target }}/release/doclytics${{ matrix.os == 'windows-latest' && '.exe' || '' }}
           ASSET_NAME: doclytics-${{ env.BRANCH_NAME }}-${{ matrix.os }}
         run: |
@@ -66,7 +63,7 @@ jobs:
           -H "Authorization: token $GITHUB_TOKEN" \
           -H "Content-Type: application/zip" \
           --data-binary @$ASSET_PATH \
-          "${UPLOAD_URL}?name=${ASSET_NAME}&label=${ASSET_NAME}"
+          "${{ env.UPLOAD_URL }}?name=${ASSET_NAME}&label=${ASSET_NAME}"
   build-docker:
     runs-on: ubuntu-latest
     if: ${{ github.ref }} != 'master' && ${{ github.ref }} != 'development'
