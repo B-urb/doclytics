@@ -38,17 +38,34 @@ jobs:
           name: doclytics-${{ env.BRANCH_NAME }}-${{ matrix.os }}
           path: |
             ./target/${{ matrix.target }}/release/doclytics${{ matrix.os == 'windows-latest' && '.exe' || '' }}
-      - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
-        if: ${{ github.ref }} != 'master' && ${{ github.ref }} != 'development'
+      - name: Get Release Upload URL
+        id: get_upload_url
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./target/${{ matrix.target }}/release/doclytics${{ matrix.os == 'windows-latest' && '.exe' || '' }}
-          asset_name: doclytics-${{ env.BRANCH_NAME }}-${{ matrix.os }}
-          asset_content_type: application/octet-stream
+          TAG_NAME: ${{ github.ref }} # Assumes the tag name is the same as the ref. Adjust if necessary.
+        run: |
+          release_id=$(curl -H "Authorization: token $GITHUB_TOKEN" \
+            https://api.github.com/repos/${{ github.repository }}/releases/tags/${TAG_NAME} \
+            | jq '.id')
+          
+          upload_url=$(curl -H "Authorization: token $GITHUB_TOKEN" \
+            https://api.github.com/repos/${{ github.repository }}/releases/${release_id} \
+            | jq -r .upload_url)
+          
+          echo "::set-output name=upload_url::${upload_url}"
+      - name: Upload Asset
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT }}
+          UPLOAD_URL: ${{ steps.create_release.outputs.upload_url }} # Assuming this is set by a previous step
+          ASSET_PATH: ./target/${{ matrix.target }}/release/doclytics${{ matrix.os == 'windows-latest' && '.exe' || '' }}
+          ASSET_NAME: doclytics-${{ env.BRANCH_NAME }}-${{ matrix.os }}
+        run: |
+          curl \
+          -X POST \
+          -H "Authorization: token $GITHUB_TOKEN" \
+          -H "Content-Type: application/zip" \
+          --data-binary @$ASSET_PATH \
+          "${UPLOAD_URL}?name=${ASSET_NAME}&label=${ASSET_NAME}"
   build-docker:
     runs-on: ubuntu-latest
     if: ${{ github.ref }} != 'master' && ${{ github.ref }} != 'development'
