@@ -13,6 +13,8 @@ Before setting up and running Doclytics, ensure you have the following prerequis
 1. **Rust Environment:** Doclyics is built with Rust, so you need to have Rust installed on your machine. If you haven't already installed Rust, follow the instructions on the [official Rust website](https://www.rust-lang.org/tools/install).
 
 2. **Paperless-ngx Instance:** You should have a running instance of Paperless-ngx, as Doclytics interacts with its API. Ensure that your Paperless-ngx instance is accessible and that you have the necessary permissions to interact with it.
+   1. Create a custom field called `tagged` of type `Boolean` in custom fields. Furthermore, create an arbitrary number of fields, you want Doclytics to extract metadata for.
+   2. Get Your API-Token from clicking on "Your Username" -> My Profile -> API Auth Token
 
 3. **Ollama Setup:**
    - **Ollama Installation:** Ensure that you have ollama installed and properly configured in your environment. Follow the installation instructions provided in the [ollama repository](https://github.com/ollama/ollama) to set up ollama on your system.
