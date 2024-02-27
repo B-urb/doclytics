@@ -87,10 +87,16 @@ This configuration mounts a local directory (`./data`) to the `/app/data` direct
 Alternatively, you can use `docker run` to start the container:
 
 ```bash
-docker run -e PAPERLESS_BASE_URL=http://your-paperless-instance -e PAPERLESS_TOKEN=yourapitoken bjoern5urban/doclytics:latest
+docker run --network="host" -e PAPERLESS_BASE_URL=http://your-paperless-instance -e PAPERLESS_TOKEN=yourapitoken bjoern5urban/doclytics:latest
 ```
-
 Ensure to replace `http://your-paperless-instance` and `yourapitoken` with your actual Paperless instance URL and API token.
+> [!IMPORTANT]
+> When using `ollama serve` on the host system, please ensure you set the `OLLAMA_HOST` environment variable to `host.docker.internal`. This setting is crucial for proper communication between your containerized application and the Ollama service running on the host.
+
+```bash
+export OLLAMA_HOST=host.docker.internal
+
+
 
 ## Usage
 
