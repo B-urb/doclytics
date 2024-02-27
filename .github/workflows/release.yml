@@ -34,6 +34,10 @@ jobs:
         run: cargo build --release --target ${{ matrix.target }}
       - name: Upload artifact
         uses: actions/upload-artifact@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ github.ref }} # Assumes the tag name is the same as the ref. Adjust if necessary.
+          BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
         with:
           name: doclytics-${{ env.BRANCH_NAME }}-${{ matrix.os }}
           path: |
@@ -41,12 +45,11 @@ jobs:
       - name: Get Release Upload URL
         id: get_upload_url
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG_NAME: ${{ github.ref }} # Assumes the tag name is the same as the ref. Adjust if necessary.
+          GITHUB_TOKEN: ${{ secrets.PAT }}
           BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
         run: |
           release_id=$(curl -H "Authorization: token $GITHUB_TOKEN" \
-            https://api.github.com/repos/${{ github.repository }}/releases/tags/${TAG_NAME} \
+            https://api.github.com/repos/${{ github.repository }}/releases/tags/${BRANCH_NAME} \
             | jq '.id')
           upload_url=$(curl -H "Authorization: token $GITHUB_TOKEN" \
             https://api.github.com/repos/${{ github.repository }}/releases/${release_id} \
@@ -57,13 +60,14 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.PAT }}
           ASSET_PATH: ./target/${{ matrix.target }}/release/doclytics${{ matrix.os == 'windows-latest' && '.exe' || '' }}
           ASSET_NAME: doclytics-${{ env.BRANCH_NAME }}-${{ matrix.os }}
+          UPLOAD_URL: ${{ steps.get_upload_url.UPLOAD_URL }}
         run: |
           curl \
           -X POST \
           -H "Authorization: token $GITHUB_TOKEN" \
           -H "Content-Type: application/zip" \
           --data-binary @$ASSET_PATH \
-          "${{ steps.get_upload_url.UPLOAD_URL }}?name=${ASSET_NAME}&label=${ASSET_NAME}"
+          "${UPLOAD_URL}?name=${ASSET_NAME}&label=${ASSET_NAME}"
   build-docker:
     runs-on: ubuntu-latest
     if: ${{ github.ref }} != 'master' && ${{ github.ref }} != 'development'
