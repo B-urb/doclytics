@@ -84,7 +84,17 @@ fn init_ollama_client(host: &str, port: u16, secure_endpoint: bool) -> Ollama {
 
 // Refactor the main process into a function for better readability
 async fn process_documents(client: &Client, ollama: &Ollama, model: &str, base_url: &str) -> Result<(), Box<dyn std::error::Error>> {
-    let prompt_base = "Please extract metadata from the provided document and return it in JSON format. The fields I need are: title,topic,sender,recipient,urgency(with value either n/a or low or medium or high),date_received,category. Analyze the document to find the values for these fields and format the response as a JSON object. Use the most likely answer for each field. The response should contain only JSON data where the key and values are all in simple string format(no nested object) for direct parsing by another program. So now additional text or explanation, no introtext, the answer should start and end with curly brackets delimiting the json object ".to_string();
+    let prompt_base= env::var("BASE_PROMPT").unwrap_or_else(|_| "Please extract metadata from the provided document and return it in JSON format.\
+     The fields I need are:\
+      title,topic,sender,recipient,urgency(with value either n/a or low or medium or high),\
+      date_received,category.\
+       Analyze the document to find the values for these fields and format the response as a \
+       JSON object. Use the most likely answer for each field. \
+       The response should contain only JSON data where the key and values are all in simple string \
+       format(no nested object) for direct parsing by another program. So now additional text or \
+       explanation, no introtext, the answer should start and end with curly brackets \
+       delimiting the json object ".to_string()
+    );
     let fields = query_custom_fields(client, base_url).await?;
     match get_data_from_paperless(&client, &base_url).await {
         Ok(data) => {
@@ -120,7 +130,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .parse::<bool>().unwrap_or(false);
 
     let ollama = init_ollama_client(&ollama_host, ollama_port, ollama_secure_endpoint);
+
     let model = env::var("OLLAMA_MODEL").unwrap_or_else(|_| "llama2:13b".to_string());
+
 
     process_documents(&client, &ollama, &model, &base_url).await
 }
