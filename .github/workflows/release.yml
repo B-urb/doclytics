@@ -52,7 +52,7 @@ jobs:
             https://api.github.com/repos/${{ github.repository }}/releases/tags/${BRANCH_NAME} \
             | jq '.upload_url')
           echo ${upload_url}
-          echo "{UPLOAD_URL}={upload_url}" >> $GITHUB_OUTPUT
+          echo "UPLOAD_URL=$(upload_url)" >> $GITHUB_OUTPUT
       - name: Upload Asset
         env:
           GITHUB_TOKEN: ${{ secrets.PAT }}
