@@ -60,12 +60,8 @@ jobs:
           ASSET_NAME: doclytics-${{ env.BRANCH_NAME }}-${{ matrix.os }}
           UPLOAD_URL: ${{ steps.get_upload_url.UPLOAD_URL }}
         run: |
-          curl \
-          -X POST \
-          -H "Authorization: token $GITHUB_TOKEN" \
-          -H "Content-Type: application/zip" \
-          --data-binary @$ASSET_PATH \
-          "${UPLOAD_URL}?name=${ASSET_NAME}&label=${ASSET_NAME}"
+          echo ${UPLOAD_URL}
+          curl -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Content-Type: application/zip" --data-binary @$ASSET_PATH "${UPLOAD_URL}?name=${ASSET_NAME}&label=${ASSET_NAME}"
   build-docker:
     runs-on: ubuntu-latest
     if: ${{ github.ref }} != 'master' && ${{ github.ref }} != 'development'
