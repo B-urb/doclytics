@@ -50,6 +50,7 @@ jobs:
                 | jq -r '.upload_url' | sed 's/{?name,label}//')
           echo "UPLOAD_URL=${upload_url}" >> $GITHUB_OUTPUT
       - name: Upload Asset
+        shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.PAT }}
           ASSET_PATH: ./target/${{ matrix.target }}/release/doclytics${{ matrix.os == 'windows-latest' && '.exe' || '' }}
