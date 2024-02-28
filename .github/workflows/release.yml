@@ -58,7 +58,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.PAT }}
           ASSET_PATH: ./target/${{ matrix.target }}/release/doclytics${{ matrix.os == 'windows-latest' && '.exe' || '' }}
           ASSET_NAME: doclytics-${{ env.BRANCH_NAME }}-${{ matrix.os }}
-          UPLOAD_URL: ${{ steps.get_upload_url.UPLOAD_URL }}
+          UPLOAD_URL: ${{ steps.get_upload_url.outputs.UPLOAD_URL }}
         run: |
           echo ${UPLOAD_URL}
           echo ${{ steps.get_upload_url.UPLOAD_URL }}
