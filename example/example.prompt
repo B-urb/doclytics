@@ -1,0 +1,10 @@
+Please extract metadata from the provided document and return it in JSON format.
+The fields I need are:
+title,topic,sender,recipient,urgency(with value either n/a or low or medium or high),
+date_received,category.
+Analyze the document to find the values for these fields and format the response as a
+JSON object. Use the most likely answer for each field.
+The response should contain only JSON data where the key and values are all in simple string
+format(no nested object) for direct parsing by another program. So now additional text or
+explanation, no introtext, the answer should start and end with curly brackets
+delimiting the json object
