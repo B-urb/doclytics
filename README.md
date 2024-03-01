@@ -74,7 +74,7 @@ Here's an example `docker-compose.yml` snippet for setting up Doclytics:
 version: '3'
 services:
   doclytics:
-    image: bjoern5urban/doclytics:latest
+    image: bjoern5urban/doclytics:v1.0.0
     environment:
       PAPERLESS_BASE_URL: http://your-paperless-instance
       PAPERLESS_TOKEN: yourapitoken
@@ -89,7 +89,7 @@ This configuration mounts a local directory (`./data`) to the `/app/data` direct
 Alternatively, you can use `docker run` to start the container:
 
 ```bash
-docker run --network="host" -e PAPERLESS_BASE_URL=http://your-paperless-instance -e PAPERLESS_TOKEN=yourapitoken bjoern5urban/doclytics:latest
+docker run --network="host" -e PAPERLESS_BASE_URL=http://your-paperless-instance -e PAPERLESS_TOKEN=yourapitoken bjoern5urban/doclytics:v1.0.0
 ```
 Ensure to replace `http://your-paperless-instance` and `yourapitoken` with your actual Paperless instance URL and API token.
 > [!IMPORTANT]
