@@ -1,4 +1,4 @@
-FROM rust:1.76
+FROM rust:1.77
 
 WORKDIR /usr/doclytics
 COPY . .
