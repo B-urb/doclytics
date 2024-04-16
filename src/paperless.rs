@@ -71,32 +71,17 @@ pub async fn update_document_fields(
     metadata: &HashMap<String, Option<Value>>,
     base_url: &str
 ) -> std::result::Result<(), Box<dyn std::error::Error>> {
-    let mut custom_fields = Vec::new();
-
-    for (key, value) in metadata {
-        if key == "title" {
-            continue;
-        }
-        if let Some(field) = fields.iter().find(|&f| f.name == *key) {
-            let custom_field = CustomField {
-                field: field.id.clone(),
-                value: value.as_ref().cloned(),
-            };
-            custom_fields.push(custom_field);
-        }
-    }
-    // Add the tagged field, to indicate that the document has been processed
-    let custom_field = CustomField {
-        field: 1,
-        value: Some(serde_json::json!(true)),
-    };
-    custom_fields.push(custom_field);
     let mut payload = serde_json::Map::new();
 
-    payload.insert("custom_fields".to_string(), serde_json::json!(custom_fields));
-    if let Some(value) = metadata.get("title").and_then(|v| v.as_ref().and_then(|v| v.as_str())) {
-        payload.insert("title".to_string(), serde_json::json!(value));
+    // Fields to be patched
+    let field_names = vec!["title", "correspondent", "created", "document_type", "tags", "notes"];
+
+    for field_name in field_names {
+        if let Some(value) = metadata.get(field_name).and_then(|v| v.as_ref().and_then(|v| v.as_str())) {
+            payload.insert(field_name.to_string(), serde_json::json!(value));
+        }
     }
+
     let url = format!("{}/api/documents/{}/", base_url, document_id);
     let res = client.patch(&url).json(&payload).send().await?;
     let body = res.text().await?;
