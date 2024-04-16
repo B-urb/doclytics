@@ -81,7 +81,7 @@ pub async fn update_document_fields(
             payload.insert(field_name.to_string(), serde_json::json!(value));
         }
     }
-
+    println!("{}", payload);
     let url = format!("{}/api/documents/{}/", base_url, document_id);
     let res = client.patch(&url).json(&payload).send().await?;
     let body = res.text().await?;
