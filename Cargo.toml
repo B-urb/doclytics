@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 tokio = { version = "1", features = ["full"] }
 ollama-rs = "0.1.9"
-reqwest = {version = "0.12.3", features = ["json"]}
+reqwest = {version = "0.12.4", features = ["json"]}
 serde_json = "1.0.116"
 serde = "1.0.198"
 substring = "1.4.5"
