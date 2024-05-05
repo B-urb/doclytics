@@ -84,7 +84,7 @@ fn init_ollama_client(host: &str, port: u16, secure_endpoint: bool) -> Ollama {
 }
 
 // Refactor the main process into a function for better readability
-async fn process_documents(client: &Client, ollama: &Ollama, model: &str, base_url: &str) -> Result<(), Box<dyn std::error::Error>> {
+async fn process_documents(client: &Client, ollama: &Ollama, model: &str, base_url: &str, filter: &str) -> Result<(), Box<dyn std::error::Error>> {
     let prompt_base= env::var("BASE_PROMPT").unwrap_or_else(|_| "Please extract metadata\
      from the provided document and return it in JSON format.\
      The fields I need are:\
@@ -98,7 +98,7 @@ async fn process_documents(client: &Client, ollama: &Ollama, model: &str, base_u
        delimiting the json object ".to_string()
     );
     let fields = query_custom_fields(client, base_url).await?;
-    match get_data_from_paperless(&client, &base_url).await {
+    match get_data_from_paperless(&client, &base_url, filter).await {
         Ok(data) => {
             for document in data {
                 let res = generate_response(ollama, &model.to_string(), &prompt_base.to_string(), &document).await?;
@@ -137,8 +137,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let model = env::var("OLLAMA_MODEL").unwrap_or_else(|_| "llama2:13b".to_string());
 
+    let default_filter = env::var("PAPERLESS_FILTER").unwrap_or_else(|_| "NOT tagged=true".to_string());
 
-    process_documents(&client, &ollama, &model, &base_url).await
+    process_documents(&client, &ollama, &model, &base_url, default_filter.as_str()).await
 }
 
 fn extract_json_object(input: &str) -> Option<String> {

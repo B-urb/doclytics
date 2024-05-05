@@ -44,15 +44,17 @@ With these prerequisites met, you are now ready to proceed with the installation
 
 The application requires setting environment variables for its configuration. Below is a table describing each environment variable, indicating whether it is required or optional, its default value (if any), and a brief description:
 
-| Environment Variable     | Required | Default Value                | Description                                                                                                                     |
-|--------------------------|----------|------------------------------|---------------------------------------------------------------------------------------------------------------------------------|
-| `PAPERLESS_TOKEN`        | Yes      | None                         | The authentication token for accessing the Paperless API.                                                                       |
-| `PAPERLESS_BASE_URL`     | Yes      | None                         | The base URL for the Paperless API.                                                                                             |
-| `OLLAMA_HOST`            | No       | "localhost"                  | The hostname where the Ollama service is running.                                                                               |
-| `OLLAMA_PORT`            | No       | "11434"                      | The port on which the Ollama service is accessible.                                                                             |
-| `OLLAMA_SECURE_ENDPOINT` | No       | "false"                      | Whether to use HTTPS (`true`) or HTTP (`false`) for Ollama.                                                                     |
-| `OLLAMA_MODEL`           | No       | "llama2:13b"                 | The specific Ollama model to be used for processing.                                                                            |
-| `BASE_PROMPT`            | No       | see [Example Prompt](example/example.prompt) | Prompt given to the model, for requesting metadata.<br/> Should contain the custom fields in paperless that you want doclytics. |
+| Environment Variable     | Required | Default Value                                | Description                                                                                                                     |
+|--------------------------|---------|----------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------|
+| `PAPERLESS_TOKEN`        | Yes     | None                                         | The authentication token for accessing the Paperless API.                                                                       |
+| `PAPERLESS_BASE_URL`     | Yes     | None                                         | The base URL for the Paperless API.                                                                                             |
+| `PAPERLESS_FILTER`       | NO      | "NOT tagged=true"                            | Filter string that filters the documents to be fetched from paperless                                                           |
+| `OLLAMA_HOST`            | No      | "localhost"                                  | The hostname where the Ollama service is running.                                                                               |
+| `OLLAMA_PORT`            | No      | "11434"                                      | The port on which the Ollama service is accessible.                                                                             |
+| `OLLAMA_SECURE_ENDPOINT` | No      | "false"                                      | Whether to use HTTPS (`true`) or HTTP (`false`) for Ollama.                                                                     |
+| `OLLAMA_MODEL`           | No      | "llama2:13b"                                 | The specific Ollama model to be used for processing.                                                                            |
+| `BASE_PROMPT`            | No      | see [Example Prompt](example/example.prompt) | Prompt given to the model, for requesting metadata.<br/> Should contain the custom fields in paperless that you want doclytics. |
+| `LOG_LEVEL`              | No      | INFO                                         | Log level                                                                                                                       |
 
 
 Make sure to set the required environment variables (`PAPERLESS_TOKEN` and `PAPERLESS_BASE_URL`) before running the application. Optional variables have default values and will use those defaults if not explicitly set.

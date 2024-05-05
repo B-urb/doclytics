@@ -7,10 +7,11 @@ use crate::{CustomField, Document, Field, Response};
 pub async fn get_data_from_paperless(
     client: &Client,
     url: &str,
+    filter: &str,
 ) -> std::result::Result<Vec<Document>, Box<dyn StdError + Send + Sync>> {
     // Read token from environment
     //Define filter string
-    let filter = "NOT tagged=true".to_string();
+    let filter = filter;
 
     let response = client.get(format!("{}/api/documents/?query={}", url, filter)).send().await?;
 
