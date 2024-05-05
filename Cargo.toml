@@ -6,11 +6,11 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-tokio = { version = "1", features = ["full"] }
-ollama-rs = "0.1.7"
-reqwest = {version = "0.11.24", features = ["json"]}
-serde_json = "1.0.114"
-serde = "1.0.197"
+tokio = { version = "1.37.0", features = ["full"] }
+ollama-rs = "0.1.9"
+reqwest = {version = "0.12.4", features = ["json"]}
+serde_json = "1.0.116"
+serde = "1.0.200"
 substring = "1.4.5"
 slog = "2.7"
 slog-term = "2.8"
