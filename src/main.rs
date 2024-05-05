@@ -1,5 +1,6 @@
 mod llm_api;
 mod paperless;
+mod logger;
 
 use ollama_rs::{
     Ollama,
@@ -104,20 +105,22 @@ async fn process_documents(client: &Client, ollama: &Ollama, model: &str, base_u
                 if let Some(json_str) = extract_json_object(&res.response) {
                     match serde_json::from_str(&json_str) {
                         Ok(json) => update_document_fields(client, document.id, &fields, &json, base_url).await?,
-                        Err(e) => eprintln!("Error parsing JSON: {}", e),
+                        Err(e) => slog_scope::error!("Error parsing JSON: {}", e.to_string()),
                     }
                 } else {
-                    eprintln!("No JSON object found in the response");
+                    slog_scope::error!("No JSON object found in the response{}", "!");
                 }
             }
         }
-        Err(e) => println!("Error: {}", e),
+        Err(e) => slog_scope::error!("Error: {}", e),
     }
     Ok(())
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    logger::init(); // Initializes the global logger
+    slog_scope::info!("Application started {}", "!");
     let token = env::var("PAPERLESS_TOKEN").expect("PAPERLESS_TOKEN is not set in .env file");
     let base_url = env::var("PAPERLESS_BASE_URL").expect("PAPERLESS_BASE_URL is not set in .env file");
     let client = init_paperless_client(&token);
@@ -139,7 +142,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn extract_json_object(input: &str) -> Option<String> {
-    println!("Input: {}", input);
+    slog_scope::debug!("Input: {}", input);
     let mut brace_count = 0;
     let mut json_start = None;
     let mut json_end = None;
@@ -165,7 +168,7 @@ fn extract_json_object(input: &str) -> Option<String> {
     }
 
     if let (Some(start), Some(end)) = (json_start, json_end) {
-        println!("{}", input.substring(start, end + 1));
+        slog_scope::debug!("{}", input.substring(start, end + 1));
         Some(input.substring(start, end + 1).to_string()) // Use end with equal sign
     } else {
         None
