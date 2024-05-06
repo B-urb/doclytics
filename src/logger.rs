@@ -14,7 +14,7 @@ lazy_static! {
         let drain = slog_term::FullFormat::new(decorator).build().fuse();
         let drain = slog::LevelFilter::new(drain, level).fuse();
         let drain = slog_async::Async::new(drain).build().fuse();
-        Logger::root(drain, o!("version" => env!("CARGO_PKG_VERSION")))
+        Logger::root(drain, o!())
     };
     static ref LOGGER_GUARD: Mutex<Option<slog_scope::GlobalLoggerGuard>> = Mutex::new(None);
 
