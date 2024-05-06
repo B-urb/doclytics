@@ -40,7 +40,8 @@ pub async fn get_data_from_paperless(
                     let start = (column as isize - 30).max(0) as usize;
                     let end = (column + 30).min(json.len());
                     slog_scope::error!("Error while creating json of document response from paperless {}", e);
-                    slog_scope::error!("Error at column {}: {}, \n in json {}", column, &json[start..end], &json);
+                    slog_scope::error!("Error at column {}: {}, \n in json {}", column, &json[start..end]);
+                    slog_scope::debug!("Error occured in json {}", &json);
                     Err(e.into()) // Remove the semicolon here
                 }
             }
@@ -78,14 +79,15 @@ pub async fn get_data_from_paperless(
                         let column = e.column();
                         let start = (column as isize - 30).max(0) as usize;
                         let end = (column + 30).min(json.len());
-                        slog_scope::error!("Error occured while fetching custom fields: {}", e);
-                        slog_scope::error!("Error at column {}: {}, \n in json {}", column, &json[start..end], &json);
+                        slog_scope::error!("Error occured parsing custom fields: {}", e);
+                        slog_scope::error!("Error at column {}: {}, \n in json {}", column, &json[start..end]);
+                        slog_scope::debug!("Error occured in json {}", &json);
                         Err(e.into()) 
                     }
                 }
             }
             Err(e) => {
-                slog_scope::error!("{}", e);
+                slog_scope::error!("Error retrieving custom fields: {}", e);
                 Err(e.into())
             }
         }
