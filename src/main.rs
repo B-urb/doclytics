@@ -1,5 +1,6 @@
 mod llm_api;
 mod paperless;
+mod logger;
 
 use ollama_rs::{
     Ollama,
@@ -83,7 +84,7 @@ fn init_ollama_client(host: &str, port: u16, secure_endpoint: bool) -> Ollama {
 }
 
 // Refactor the main process into a function for better readability
-async fn process_documents(client: &Client, ollama: &Ollama, model: &str, base_url: &str) -> Result<(), Box<dyn std::error::Error>> {
+async fn process_documents(client: &Client, ollama: &Ollama, model: &str, base_url: &str, filter: &str) -> Result<(), Box<dyn std::error::Error>> {
     let prompt_base= env::var("BASE_PROMPT").unwrap_or_else(|_| "Please extract metadata\
      from the provided document and return it in JSON format.\
      The fields I need are:\
@@ -97,27 +98,29 @@ async fn process_documents(client: &Client, ollama: &Ollama, model: &str, base_u
        delimiting the json object ".to_string()
     );
     let fields = query_custom_fields(client, base_url).await?;
-    match get_data_from_paperless(&client, &base_url).await {
+    match get_data_from_paperless(&client, &base_url, filter).await {
         Ok(data) => {
             for document in data {
                 let res = generate_response(ollama, &model.to_string(), &prompt_base.to_string(), &document).await?;
                 if let Some(json_str) = extract_json_object(&res.response) {
                     match serde_json::from_str(&json_str) {
                         Ok(json) => update_document_fields(client, document.id, &fields, &json, base_url).await?,
-                        Err(e) => eprintln!("Error parsing JSON: {}", e),
+                        Err(e) => slog_scope::error!("Error parsing JSON: {}", e.to_string()),
                     }
                 } else {
-                    eprintln!("No JSON object found in the response");
+                    slog_scope::error!("No JSON object found in the response{}", "!");
                 }
             }
         }
-        Err(e) => println!("Error: {}", e),
+        Err(e) => slog_scope::error!("Error: {}", e),
     }
     Ok(())
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    logger::init(); // Initializes the global logger
+    slog_scope::info!("Application started {}", "!");
     let token = env::var("PAPERLESS_TOKEN").expect("PAPERLESS_TOKEN is not set in .env file");
     let base_url = env::var("PAPERLESS_BASE_URL").expect("PAPERLESS_BASE_URL is not set in .env file");
     let client = init_paperless_client(&token);
@@ -134,12 +137,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let model = env::var("OLLAMA_MODEL").unwrap_or_else(|_| "llama2:13b".to_string());
 
+    let default_filter = env::var("PAPERLESS_FILTER").unwrap_or_else(|_| "NOT tagged=true".to_string());
 
-    process_documents(&client, &ollama, &model, &base_url).await
+    process_documents(&client, &ollama, &model, &base_url, default_filter.as_str()).await
 }
 
 fn extract_json_object(input: &str) -> Option<String> {
-    println!("Input: {}", input);
+    slog_scope::debug!("Input: {}", input);
     let mut brace_count = 0;
     let mut json_start = None;
     let mut json_end = None;
@@ -165,7 +169,7 @@ fn extract_json_object(input: &str) -> Option<String> {
     }
 
     if let (Some(start), Some(end)) = (json_start, json_end) {
-        println!("{}", input.substring(start, end + 1));
+        slog_scope::debug!("{}", input.substring(start, end + 1));
         Some(input.substring(start, end + 1).to_string()) // Use end with equal sign
     } else {
         None
