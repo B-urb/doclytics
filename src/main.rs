@@ -112,7 +112,7 @@ async fn process_documents(client: &Client, ollama: &Ollama, model: &str, base_u
                 }
             }
         }
-        Err(e) => slog_scope::error!("Error: {}", e),
+        Err(e) => slog_scope::error!("Error while interacting with paperless: {}", e),
     }
     Ok(())
 }
