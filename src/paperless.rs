@@ -12,7 +12,7 @@ pub async fn get_data_from_paperless(
     // Read token from environment
     //Define filter string
     let filter = filter;
-
+    slog_scope::info!("Retrieve Documents from paperless at: {}, with query: {}",url, filter);
     let response = client.get(format!("{}/api/documents/?query={}", url, filter)).send().await?;
 
 
@@ -34,7 +34,10 @@ pub async fn get_data_from_paperless(
             // Parse the JSON string into the Response struct
             let data: std::result::Result<Response<Document>, _> = serde_json::from_str(json);
             match data {
-                Ok(data) => Ok(data.results),
+                Ok(data) => {
+                    slog_scope::info!("Successfully retrieved {} Documents", data.results.len());
+                    Ok(data.results)
+                },
                 Err(e) => {
                     let column = e.column();
                     let start = (column as isize - 30).max(0) as usize;
@@ -56,6 +59,7 @@ pub async fn get_data_from_paperless(
         client: &Client,
         base_url: &str,
     ) -> std::result::Result<Vec<Field>, Box<dyn std::error::Error>> {
+        slog_scope::info!("Fetching custom fields from paperless at {}", base_url);
         let res = client
             .get(format!("{}/api/custom_fields/", base_url))
             .send()
@@ -127,12 +131,14 @@ pub async fn get_data_from_paperless(
             payload.insert("title".to_string(), serde_json::json!(value));
         }
         let url = format!("{}/api/documents/{}/", base_url, document_id);
+        slog_scope::info!("Updating document with ID: {}", document_id);
         let res = client.patch(&url).json(&payload).send().await?;
         let response_result = res.error_for_status();
         match response_result {
             Ok(data) => {
                 let body = data.text().await?;
                 slog_scope::debug!("{}", body);
+                slog_scope::info!("Document with ID: {} successfully updated", document_id);
                 Ok(())
             }
             Err(e) => {
