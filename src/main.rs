@@ -101,11 +101,15 @@ async fn process_documents(client: &Client, ollama: &Ollama, model: &str, base_u
     match get_data_from_paperless(&client, &base_url, filter).await {
         Ok(data) => {
             for document in data {
+                slog_scope::info!("Generate Response with LLM {}", "model");
                 let res = generate_response(ollama, &model.to_string(), &prompt_base.to_string(), &document).await?;
                 if let Some(json_str) = extract_json_object(&res.response) {
                     match serde_json::from_str(&json_str) {
                         Ok(json) => update_document_fields(client, document.id, &fields, &json, base_url).await?,
-                        Err(e) => slog_scope::error!("Error parsing JSON: {}", e.to_string()),
+                        Err(e) => {
+                            slog_scope::error!("Error parsing llm response json {}", e.to_string());
+                            slog_scope::debug!("JSON String was: {}",&json_str);
+                        },
                     }
                 } else {
                     slog_scope::error!("No JSON object found in the response{}", "!");
