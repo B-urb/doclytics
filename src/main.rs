@@ -22,7 +22,7 @@ use crate::paperless::{get_data_from_paperless, query_custom_fields, update_docu
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct Document {
     id: u32,
-    correspondent: Option<String>,
+    correspondent: Option<u32>,
     document_type: Option<String>,
     storage_path: Option<String>,
     title: String,
