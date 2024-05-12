@@ -34,7 +34,7 @@ struct Document {
     archive_serial_number: Option<String>,
     original_file_name: String,
     archived_file_name: String,
-    owner: u32,
+    owner: Option<u32>,
     notes: Vec<String>,
     tags: Vec<u32>,
     user_can_change: bool,
