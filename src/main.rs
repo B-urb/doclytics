@@ -101,7 +101,9 @@ async fn process_documents(client: &Client, ollama: &Ollama, model: &str, base_u
     match get_data_from_paperless(&client, &base_url, filter).await {
         Ok(data) => {
             for document in data {
+                slog_scope::trace!("Document Content: {}", document.content);
                 slog_scope::info!("Generate Response with LLM {}", "model");
+                slog_scope::debug!("with Prompt: {}", prompt_base);
                 let res = generate_response(ollama, &model.to_string(), &prompt_base.to_string(), &document).await?;
                 if let Some(json_str) = extract_json_object(&res.response) {
                     match serde_json::from_str(&json_str) {
