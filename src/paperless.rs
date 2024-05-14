@@ -161,7 +161,7 @@ pub async fn update_document_fields(
     match response_result {
         Ok(data) => {
             let body = data.text().await?;
-            slog_scope::debug!("{}", body);
+            slog_scope::trace!("{}", body);
             slog_scope::info!("Document with ID: {} successfully updated", document_id);
             Ok(())
         }
