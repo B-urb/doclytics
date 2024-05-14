@@ -5,7 +5,6 @@ mod logger;
 use ollama_rs::{
     Ollama,
 };
-use substring::Substring;
 
 use reqwest::{Client, };
 use std::result::Result;
@@ -110,19 +109,20 @@ async fn process_documents(client: &Client, ollama: &Ollama, model: &str, base_u
                 // Log the response from the generate_response call
                 slog_scope::debug!("LLM Response: {}", res.response);
 
-                if let Some(json_str) = extract_json_object(&res.response) {
-                    // Log successful JSON extraction
-                    slog_scope::debug!("Extracted JSON Object: {}", json_str);
+                match extract_json_object(&res.response) {
+                    Ok(json_str) => {
+                        // Log successful JSON extraction
+                        slog_scope::debug!("Extracted JSON Object: {}", json_str);
 
-                    match serde_json::from_str(&json_str) {
-                        Ok(json) => update_document_fields(client, document.id, &fields, &json, base_url).await?,
-                        Err(e) => {
-                            slog_scope::error!("Error parsing llm response json {}", e.to_string());
-                            slog_scope::debug!("JSON String was: {}", &json_str);
-                        },
+                        match serde_json::from_str(&json_str) {
+                            Ok(json) => update_document_fields(client, document.id, &fields, &json, base_url).await?,
+                            Err(e) => {
+                                slog_scope::error!("Error parsing llm response json {}", e.to_string());
+                                slog_scope::debug!("JSON String was: {}", &json_str);
+                            },
+                        }
                     }
-                } else {
-                    slog_scope::error!("No JSON object found in the response{}", "!");
+                    Err(e) => slog_scope::error!("{}", e),
                 }
             }
         }
@@ -156,7 +156,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     process_documents(&client, &ollama, &model, &base_url, default_filter.as_str()).await
 }
 
-fn extract_json_object(input: &str) -> Option<String> {
+fn extract_json_object(input: &str) -> Result<String, String> {
     let mut brace_count = 0;
     let mut json_start = None;
     let mut json_end = None;
@@ -182,9 +182,12 @@ fn extract_json_object(input: &str) -> Option<String> {
     }
 
     if let (Some(start), Some(end)) = (json_start, json_end) {
-        slog_scope::debug!("{}", input.substring(start, end + 1));
-        Some(input.substring(start, end + 1).to_string()) // Use end with equal sign
+        let json_str = &input[start..=end]; // Use end with equal sign
+        slog_scope::debug!("Extracted JSON Object: {}", json_str);
+        Ok(json_str.to_string())
     } else {
-        None
+        let error_msg = "No JSON object found in the response!".to_string();
+        slog_scope::debug!("{}", error_msg);
+        Err(error_msg)
     }
 }
