@@ -104,13 +104,21 @@ async fn process_documents(client: &Client, ollama: &Ollama, model: &str, base_u
                 slog_scope::trace!("Document Content: {}", document.content);
                 slog_scope::info!("Generate Response with LLM {}", "model");
                 slog_scope::debug!("with Prompt: {}", prompt_base);
+
                 let res = generate_response(ollama, &model.to_string(), &prompt_base.to_string(), &document).await?;
+
+                // Log the response from the generate_response call
+                slog_scope::debug!("LLM Response: {}", res.response);
+
                 if let Some(json_str) = extract_json_object(&res.response) {
+                    // Log successful JSON extraction
+                    slog_scope::debug!("Extracted JSON Object: {}", json_str);
+
                     match serde_json::from_str(&json_str) {
                         Ok(json) => update_document_fields(client, document.id, &fields, &json, base_url).await?,
                         Err(e) => {
                             slog_scope::error!("Error parsing llm response json {}", e.to_string());
-                            slog_scope::debug!("JSON String was: {}",&json_str);
+                            slog_scope::debug!("JSON String was: {}", &json_str);
                         },
                     }
                 } else {
@@ -149,7 +157,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn extract_json_object(input: &str) -> Option<String> {
-    slog_scope::debug!("Input: {}", input);
     let mut brace_count = 0;
     let mut json_start = None;
     let mut json_end = None;
