@@ -146,6 +146,10 @@ pub async fn update_document_fields(
     if let Some(value) = metadata.get("title").and_then(|v| v.as_ref().and_then(|v| v.as_str())) {
         payload.insert("title".to_string(), serde_json::json!(value));
     }
+    if payload.is_empty() {
+        slog_scope::warn!("{}", "payload is empty, not updating fields");
+        return Err(Box::new(fmt::Error::default())); // Use a standard library error type like fmt::Error.
+    }
     let url = format!("{}/api/documents/{}/", base_url, document_id);
     slog_scope::info!("Updating document with ID: {}", document_id);
     slog_scope::debug!("Request Payload: {}", "");
