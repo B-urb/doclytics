@@ -13,5 +13,14 @@ pub async fn generate_response(
     let res = ollama
         .generate(GenerationRequest::new(model.clone(), prompt))
         .await;
-    res.map_err(|e| e.into()) // Map the Err variant to a Box<dyn std::error::Error>
+    match res { 
+        Ok(res) => {
+           slog_scope::debug!("Response from ollama {}", res.response);
+            Ok(res)
+        },
+        Err(e) => {
+            slog_scope::error!("{}", e);
+            Err(e.into())
+        }
+    }
 }
