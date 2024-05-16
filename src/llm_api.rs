@@ -15,7 +15,7 @@ pub async fn generate_response(
         .await;
     match res { 
         Ok(res) => {
-           slog_scope::debug!("Response from ollama {}", res.response);
+           slog_scope::debug!("Response from ollama:\n {}", res.response);
             Ok(res)
         },
         Err(e) => {

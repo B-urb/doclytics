@@ -142,7 +142,7 @@ async fn process_documents(client: &Client, ollama: &Ollama, model: &str, base_u
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     logger::init(); // Initializes the global logger
-    slog_scope::info!("Application started {}", "!");
+    slog_scope::info!("Application started, version: {}", env!("CARGO_PKG_VERSION"));
     let token = env::var("PAPERLESS_TOKEN").expect("PAPERLESS_TOKEN is not set in .env file");
     let base_url = env::var("PAPERLESS_BASE_URL").expect("PAPERLESS_BASE_URL is not set in .env file");
     let client = init_paperless_client(&token);
