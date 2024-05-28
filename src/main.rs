@@ -5,9 +5,8 @@ mod logger;
 use ollama_rs::{
     Ollama,
 };
-use substring::Substring;
 
-use reqwest::{Client, };
+use reqwest::{Client};
 use std::result::Result;
 
 //function that fetches data from the endpoint
@@ -18,22 +17,23 @@ use serde_json::{Value};
 use std::env;
 use crate::llm_api::generate_response;
 use crate::paperless::{get_data_from_paperless, query_custom_fields, update_document_fields};
+use substring::Substring;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct Document {
     id: u32,
     correspondent: Option<u32>,
-    document_type: Option<String>,
+    document_type: Option<u32>,
     storage_path: Option<String>,
     title: String,
     content: String,
     created: String,
-    created_date: String,
+    created_date: Option<String>,
     modified: String,
     added: String,
     archive_serial_number: Option<String>,
     original_file_name: String,
-    archived_file_name: String,
+    archived_file_name: Option<String>,
     owner: Option<u32>,
     notes: Vec<String>,
     tags: Vec<u32>,
@@ -49,6 +49,7 @@ struct Response<T> {
     all: Vec<u32>,
     results: Vec<T>,
 }
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct CustomField {
     value: Option<Value>,
@@ -85,7 +86,7 @@ fn init_ollama_client(host: &str, port: u16, secure_endpoint: bool) -> Ollama {
 
 // Refactor the main process into a function for better readability
 async fn process_documents(client: &Client, ollama: &Ollama, model: &str, base_url: &str, filter: &str) -> Result<(), Box<dyn std::error::Error>> {
-    let prompt_base= env::var("BASE_PROMPT").unwrap_or_else(|_| "Please extract metadata\
+    let prompt_base = env::var("BASE_PROMPT").unwrap_or_else(|_| "Please extract metadata\
      from the provided document and return it in JSON format.\
      The fields I need are:\
       title,topic,sender,recipient,urgency(with value either n/a or low or medium or high),\
@@ -101,21 +102,38 @@ async fn process_documents(client: &Client, ollama: &Ollama, model: &str, base_u
     match get_data_from_paperless(&client, &base_url, filter).await {
         Ok(data) => {
             for document in data {
+                slog_scope::trace!("Document Content: {}", document.content);
                 slog_scope::info!("Generate Response with LLM {}", "model");
-                let res = generate_response(ollama, &model.to_string(), &prompt_base.to_string(), &document).await?;
-                if let Some(json_str) = extract_json_object(&res.response) {
-                    match serde_json::from_str(&json_str) {
-                        Ok(json) => update_document_fields(client, document.id, &fields, &json, base_url).await?,
-                        Err(e) => {
-                            slog_scope::error!("Error parsing llm response json {}", e.to_string());
-                            slog_scope::debug!("JSON String was: {}",&json_str);
-                        },
+                slog_scope::debug!("with Prompt: {}", prompt_base);
+
+                match generate_response(ollama, &model.to_string(), &prompt_base.to_string(), &document).await {
+                    Ok(res) => {
+                        // Log the response from the generate_response call
+                        slog_scope::debug!("LLM Response: {}", res.response);
+
+                        match extract_json_object(&res.response) {
+                            Ok(json_str) => {
+                                // Log successful JSON extraction
+                                slog_scope::debug!("Extracted JSON Object: {}", json_str);
+
+                                match serde_json::from_str(&json_str) {
+                                    Ok(json) => update_document_fields(client, document.id, &fields, &json, base_url).await?,
+                                    Err(e) => {
+                                        slog_scope::error!("Error parsing llm response json {}", e.to_string());
+                                        slog_scope::debug!("JSON String was: {}", &json_str);
+                                    }
+                                }
+                            }
+                            Err(e) => slog_scope::error!("{}", e),
+                        }
+                    },
+                    Err(e) => {
+                        slog_scope::error!("Error generating llm response: {}", e);
+                        continue;
                     }
-                } else {
-                    slog_scope::error!("No JSON object found in the response{}", "!");
                 }
             }
-        }
+        },
         Err(e) => slog_scope::error!("Error while interacting with paperless: {}", e),
     }
     Ok(())
@@ -124,7 +142,7 @@ async fn process_documents(client: &Client, ollama: &Ollama, model: &str, base_u
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     logger::init(); // Initializes the global logger
-    slog_scope::info!("Application started {}", "!");
+    slog_scope::info!("Application started, version: {}", env!("CARGO_PKG_VERSION"));
     let token = env::var("PAPERLESS_TOKEN").expect("PAPERLESS_TOKEN is not set in .env file");
     let base_url = env::var("PAPERLESS_BASE_URL").expect("PAPERLESS_BASE_URL is not set in .env file");
     let client = init_paperless_client(&token);
@@ -146,8 +164,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     process_documents(&client, &ollama, &model, &base_url, default_filter.as_str()).await
 }
 
-fn extract_json_object(input: &str) -> Option<String> {
-    slog_scope::debug!("Input: {}", input);
+fn extract_json_object(input: &str) -> Result<String, String> {
     let mut brace_count = 0;
     let mut json_start = None;
     let mut json_end = None;
@@ -155,17 +172,16 @@ fn extract_json_object(input: &str) -> Option<String> {
     for (i, c) in input.chars().enumerate() {
         match c {
             '{' | '[' => {
-                brace_count += 1;
-                if json_start.is_none() {
+                if brace_count == 0 {
                     json_start = Some(i);
                 }
+                brace_count += 1;
             }
             '}' | ']' => {
-                if brace_count > 0 {
-                    brace_count -= 1;
-                    if brace_count == 0 {
-                        json_end = Some(i); // Include the closing brace
-                    }
+                brace_count -= 1;
+                if brace_count == 0 {
+                    json_end = Some(i);
+                    break; // Found the complete JSON object
                 }
             }
             _ => {}
@@ -174,8 +190,11 @@ fn extract_json_object(input: &str) -> Option<String> {
 
     if let (Some(start), Some(end)) = (json_start, json_end) {
         slog_scope::debug!("{}", input.substring(start, end + 1));
-        Some(input.substring(start, end + 1).to_string()) // Use end with equal sign
+        Ok(input.substring(start, end + 1).to_string())
     } else {
-        None
+        let error_msg = "No JSON object found in the response!".to_string();
+        slog_scope::debug!("{}", error_msg);
+        Err(error_msg)
     }
 }
+
