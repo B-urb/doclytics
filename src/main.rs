@@ -198,3 +198,26 @@ fn extract_json_object(input: &str) -> Result<String, String> {
     }
 }
 
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_extract_json_object() {
+        let json_str = "Some text before JSON object {\"key\": \"value\"} Some text after";
+        assert_eq!(
+            extract_json_object(json_str).unwrap(),
+            "{\"key\": \"value\"}"
+        );
+
+        let json_array_str = "Some text before JSON array [1,2,3] Some text after";
+        assert_eq!(
+            extract_json_object(json_array_str).unwrap(),
+            "[1,2,3]"
+        );
+
+        let empty_json_str = "No JSON object or array here";
+        assert!(extract_json_object(empty_json_str).is_err());
+    }
+}
