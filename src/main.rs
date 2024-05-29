@@ -86,18 +86,36 @@ fn init_ollama_client(host: &str, port: u16, secure_endpoint: bool) -> Ollama {
 
 // Refactor the main process into a function for better readability
 async fn process_documents(client: &Client, ollama: &Ollama, model: &str, base_url: &str, filter: &str) -> Result<(), Box<dyn std::error::Error>> {
-    let prompt_base = env::var("BASE_PROMPT").unwrap_or_else(|_| "Please extract metadata\
-     from the provided document and return it in JSON format.\
-     The fields I need are:\
-      title,topic,sender,recipient,urgency(with value either n/a or low or medium or high),\
-      date_received,category.\
-       Analyze the document to find the values for these fields and format the response as a \
-       JSON object. Use the most likely answer for each field. \
-       The response should contain only JSON data where the key and values are all in simple string \
-       format(no nested object) for direct parsing by another program. So now additional text or \
-       explanation, no introtext, the answer should start and end with curly brackets \
-       delimiting the json object ".to_string()
-    );
+    let language= env::var("LANGUAGE").unwrap_or_else(|_| "EN".to_string()).to_uppercase();
+    let base_prompt;
+
+    match language.as_ref(){
+        "DE"=> base_prompt = "Bitte ziehe die Metadaten aus dem bereitgestelltem Dokument \
+        und antworte im JSON format. \
+        Die Felder, welche ich brauche sind:\
+         title,topic,sender,recipient,urgency(mit werten entweder n/a oder low oder medium oder high),\
+         date_received(im maschinenlesbarem format),category.\
+         Analysiere das Dokument, um die Werte für diese Felder zu finden und forme die Antwort als JSON-Objekt. \
+         Verwende die wahrscheinlichste Antwort für jedes Feld in der gleichen Sprache wie das Dokument. \
+         Die Antwort sollte nur JSON-Daten enthalten, bei denen die Schlüssel und Werte alle in einfacher Textform \
+         (keine verschachtelten Objekte) vorliegen, um von einem anderen Programm direkt analysiert werden zu können. \
+         Also keine zusätzlichen Texte oder Erklärungen, der Antworttext sollte mit eckigen Klammern beginnen und enden, \
+         die das JSON-Objekt umfassen ".to_string(),
+        _=> base_prompt =  "Please extract metadata\
+        from the provided document and return it in JSON format.\
+        The fields I need are:\
+         title,topic,sender,recipient,urgency(with value either n/a or low or medium or high),\
+         date_received(in machine-readable format),category.\
+          Analyze the document to find the values for these fields and format the response as a \
+          JSON object. Use the most likely answer for each field. \
+          The response should contain only JSON data where the key and values are all in simple string \
+          format(no nested object) for direct parsing by another program. So now additional text or \
+          explanation, no introtext, the answer should start and end with curly brackets \
+          delimiting the json object ".to_string()
+    };
+
+    let prompt_base= env::var("BASE_PROMPT").unwrap_or_else(|_| base_prompt.to_string());     
+    
     let fields = query_custom_fields(client, base_url).await?;
     match get_data_from_paperless(&client, &base_url, filter).await {
         Ok(data) => {
