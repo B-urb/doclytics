@@ -24,7 +24,7 @@ struct Document {
     id: u32,
     correspondent: Option<u32>,
     document_type: Option<u32>,
-    storage_path: Option<String>,
+    storage_path: Option<u32>,
     title: String,
     content: String,
     created: String,
