@@ -32,7 +32,7 @@ struct Document {
     modified: String,
     added: String,
     archive_serial_number: Option<String>,
-    original_file_name: String,
+    original_file_name: Option<String>,
     archived_file_name: Option<String>,
     owner: Option<u32>,
     notes: Vec<String>,
