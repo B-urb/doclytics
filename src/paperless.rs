@@ -136,13 +136,18 @@ pub async fn update_document_fields(
             let custom_field = convert_field_to_custom_field(value, field);
             custom_fields.push(custom_field);
         }
-        else { 
+        else {
             if matches!(mode, Mode::Create) {
-                slog_scope::info!("Creating field: {}", field.name);
-               match create_custom_field(client, field, base_url).await
+                slog_scope::info!("Creating field: {}", key);
+                let create_field = CreateField {
+                    name: key.clone(),
+                    data_type: "string".to_string(),
+                    default_value: None,
+                };
+               match create_custom_field(client, &create_field, base_url).await
                {
-                   Ok(_) => {
-                       let custom_field = convert_field_to_custom_field(value, field);
+                   Ok(new_field) => {
+                       let custom_field = convert_field_to_custom_field(value, &new_field);
                        custom_fields.push(custom_field)
                    },
                    Err(e) => {
@@ -203,27 +208,30 @@ struct CreateField {
 
 pub async fn create_custom_field(
     client: &Client,
-    field: &Field,
+    field: &CreateField,
     base_url: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<Field, Box<dyn std::error::Error>> {
     // Define the URL for creating a custom field
     let url = format!("{}/api/custom_fields/", base_url);
 
-    // Create the payload for the custom field
-    let custom_field = CreateField {
-        name: field.name.clone(),
-        default_value: None,
-        data_type: field.data_type.clone(),
-    };
 
     // Send the request to create the custom field
-    let res = client.post(&url).json(&custom_field).send().await?;
+    let res = client.post(&url).json(&field).send().await?;
     let response_result = res.error_for_status();
     match response_result {
         Ok(data) => {
             let body = data.text().await?;
             slog_scope::trace!("{}", body);
-            Ok(())
+            let field: Result<Response<Field>, _> = serde_json::from_str(&body);
+            match field { 
+                Ok(field) => {
+                    Ok(field.results[0].clone()) // TODO: improve
+                },
+                Err(e) => {
+                    slog_scope::error!("Error creating custom field: {}", e);
+                    Err(e.into())
+                }
+            }
         }
         Err(e) => {
             slog_scope::error!("Error creating custom field: {}", e);
