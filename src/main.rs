@@ -63,6 +63,21 @@ struct Field {
     data_type: String,
 }
 
+#[derive(Clone, Copy)]
+enum Mode {
+    Create,
+    NoCreate,
+}
+impl Mode {
+    fn from_int(value: i32) -> Self {
+        match value {
+            1 => Mode::Create,
+            0 => Mode::NoCreate,
+            _ => Mode::NoCreate,
+        }
+    }
+}
+
 
 // Initialize the HTTP client with Paperless API token and base URL
 fn init_paperless_client(token: &str) -> Client {
@@ -98,6 +113,9 @@ async fn process_documents(client: &Client, ollama: &Ollama, model: &str, base_u
        explanation, no introtext, the answer should start and end with curly brackets \
        delimiting the json object ".to_string()
     );
+    let mode_env = env::var("MODE").unwrap_or_else(|_| "0".to_string());
+    let mode_int = mode_env.parse::<i32>().unwrap_or(0);
+    let mode = Mode::from_int(mode_int);
     let fields = query_custom_fields(client, base_url).await?;
     match get_data_from_paperless(&client, &base_url, filter).await {
         Ok(data) => {
@@ -117,7 +135,7 @@ async fn process_documents(client: &Client, ollama: &Ollama, model: &str, base_u
                                 slog_scope::debug!("Extracted JSON Object: {}", json_str);
 
                                 match serde_json::from_str(&json_str) {
-                                    Ok(json) => update_document_fields(client, document.id, &fields, &json, base_url).await?,
+                                    Ok(json) => update_document_fields(client, document.id, &fields, &json, base_url, mode).await?,
                                     Err(e) => {
                                         slog_scope::error!("Error parsing llm response json {}", e.to_string());
                                         slog_scope::debug!("JSON String was: {}", &json_str);

@@ -3,7 +3,8 @@ use std::fmt;
 use reqwest::Client;
 use serde::de::StdError;
 use serde_json::Value;
-use crate::{CustomField, Document, Field, Response};
+use crate::{CustomField, Document, Field, Mode, Response};
+use serde::{Deserialize, Serialize};
 
 pub async fn get_data_from_paperless(
     client: &Client,
@@ -105,6 +106,7 @@ pub async fn update_document_fields(
     fields: &Vec<Field>,
     metadata: &HashMap<String, Option<Value>>,
     base_url: &str,
+    mode: Mode,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let mut custom_fields = Vec::new();
 
@@ -131,15 +133,27 @@ pub async fn update_document_fields(
         }
 
         if let Some(field) = fields.iter().find(|&f| f.name == *key) {
-            let custom_field = CustomField {
-                field: field.id.clone(),
-                value: value.as_ref().cloned(),
-            };
+            let custom_field = convert_field_to_custom_field(value, field);
             custom_fields.push(custom_field);
+        }
+        else { 
+            if matches!(mode, Mode::Create) {
+                slog_scope::info!("Creating field: {}", field.name);
+               match create_custom_field(client, field, base_url).await
+               {
+                   Ok(_) => {
+                       let custom_field = convert_field_to_custom_field(value, field);
+                       custom_fields.push(custom_field)
+                   },
+                   Err(e) => {
+                       slog_scope::error!("Error: {} creating custom field: {}, skipping...",e, field.name)
+                   }
+               }
+            }
         }
     }
 // Check if tagged_field_id has a value and then proceed.
-     
+
     let mut payload = serde_json::Map::new();
 
     payload.insert("custom_fields".to_string(), serde_json::json!(custom_fields));
@@ -171,3 +185,51 @@ pub async fn update_document_fields(
         }
     }
 }
+
+fn convert_field_to_custom_field(value: &Option<Value>, field: &Field) -> CustomField {
+    let custom_field = CustomField {
+        field: field.id.clone(),
+        value: value.as_ref().cloned(),
+    };
+    custom_field
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct CreateField {
+    name: String,
+    default_value: Option<String>,
+    data_type: String,
+}
+
+pub async fn create_custom_field(
+    client: &Client,
+    field: &Field,
+    base_url: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    // Define the URL for creating a custom field
+    let url = format!("{}/api/custom_fields/", base_url);
+
+    // Create the payload for the custom field
+    let custom_field = CreateField {
+        name: field.name.clone(),
+        default_value: None,
+        data_type: field.data_type.clone(),
+    };
+
+    // Send the request to create the custom field
+    let res = client.post(&url).json(&custom_field).send().await?;
+    let response_result = res.error_for_status();
+    match response_result {
+        Ok(data) => {
+            let body = data.text().await?;
+            slog_scope::trace!("{}", body);
+            Ok(())
+        }
+        Err(e) => {
+            slog_scope::error!("Error creating custom field: {}", e);
+            Err(e.into())
+        }
+    }
+}
+
+
