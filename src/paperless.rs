@@ -141,7 +141,7 @@ pub async fn update_document_fields(
                 slog_scope::info!("Creating field: {}", key);
                 let create_field = CreateField {
                     name: key.clone(),
-                    data_type: "string".to_string(),
+                    data_type: "Text".to_string(),
                     default_value: None,
                 };
                match create_custom_field(client, &create_field, base_url).await
@@ -151,7 +151,7 @@ pub async fn update_document_fields(
                        custom_fields.push(custom_field)
                    },
                    Err(e) => {
-                       slog_scope::error!("Error: {} creating custom field: {}, skipping...",e, field.name)
+                       slog_scope::error!("Error: {} creating custom field: {}, skipping...",e, key)
                    }
                }
             }
@@ -200,7 +200,7 @@ fn convert_field_to_custom_field(value: &Option<Value>, field: &Field) -> Custom
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-struct CreateField {
+pub struct CreateField {
     name: String,
     default_value: Option<String>,
     data_type: String,
@@ -223,12 +223,13 @@ pub async fn create_custom_field(
             let body = data.text().await?;
             slog_scope::trace!("{}", body);
             let field: Result<Response<Field>, _> = serde_json::from_str(&body);
-            match field { 
+            match field {
                 Ok(field) => {
                     Ok(field.results[0].clone()) // TODO: improve
                 },
                 Err(e) => {
-                    slog_scope::error!("Error creating custom field: {}", e);
+                    slog_scope::debug!("Creating field response: {}", body);
+                    slog_scope::error!("Error parsing response from new field: {}", e);
                     Err(e.into())
                 }
             }

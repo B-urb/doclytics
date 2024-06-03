@@ -19,4 +19,5 @@ slog-json = "2.4"
 slog-scope = "4.4"
 slog-stdlog = "4.1"
 lazy_static = "1.4"
+chrono = "0.4.38"
 
