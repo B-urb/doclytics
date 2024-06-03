@@ -24,7 +24,7 @@ struct Document {
     id: u32,
     correspondent: Option<u32>,
     document_type: Option<u32>,
-    storage_path: Option<String>,
+    storage_path: Option<u32>,
     title: String,
     content: String,
     created: String,
@@ -32,7 +32,7 @@ struct Document {
     modified: String,
     added: String,
     archive_serial_number: Option<String>,
-    original_file_name: String,
+    original_file_name: Option<String>,
     archived_file_name: Option<String>,
     owner: Option<u32>,
     notes: Vec<String>,
@@ -198,3 +198,26 @@ fn extract_json_object(input: &str) -> Result<String, String> {
     }
 }
 
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_extract_json_object() {
+        let json_str = "Some text before JSON object {\"key\": \"value\"} Some text after";
+        assert_eq!(
+            extract_json_object(json_str).unwrap(),
+            "{\"key\": \"value\"}"
+        );
+
+        let json_array_str = "Some text before JSON array [1,2,3] Some text after";
+        assert_eq!(
+            extract_json_object(json_array_str).unwrap(),
+            "[1,2,3]"
+        );
+
+        let empty_json_str = "No JSON object or array here";
+        assert!(extract_json_object(empty_json_str).is_err());
+    }
+}

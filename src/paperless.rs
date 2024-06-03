@@ -109,22 +109,22 @@ pub async fn update_document_fields(
     let mut custom_fields = Vec::new();
 
 // Use `if let` to conditionally execute code if the 'tagged' field is found.
-    if let Some(field) = fields.iter().find(|&f| f.name == "tagged") {
-        let tagged_field = CustomField {
-            field: field.id,
-            value: Some(serde_json::json!(true)),
-        };
+    let field = match fields.iter().find(|&f| f.name == "tagged") {
+        Some(field) => field,
+        None => {
+            slog_scope::error!("{} field not found in the provided fields.", "'tagged'");
+            return Err(Box::new(fmt::Error::default())); // Use a standard library error type like fmt::Error.
+        }
+    };
 
-        // Add this tagged_field to your custom_fields collection or use it as needed.
-        custom_fields.push(tagged_field);
+    let tagged_field = CustomField {
+        field: field.id,
+        value: Some(serde_json::json!(true)),
+    };
 
-        // Continue with your logic, such as preparing the payload and sending the request.
-    } else {
-        // Handle the case where tagged_field_id is None, which means the "tagged" field wasn't found.
-        slog_scope::error!("{} field not found in the provided fields.", "'tagged'");
-        return Err(Box::new(fmt::Error::default())); // Use a standard library error type like fmt::Error.
+// Add this tagged_field to your custom_fields collection or use it as needed.
+    custom_fields.push(tagged_field);
 
-    }
     for (key, value) in metadata {
         if key == "title" {
             continue;

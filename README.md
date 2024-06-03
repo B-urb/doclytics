@@ -1,5 +1,6 @@
 # Doclytics
 
+![Doclytics Logo(created by Dall E)](doclytics-logo.webp)
 ## Description
 
 Doclytics is a straightforward Rust-based tool that integrates with the paperless-ngx API to fetch and update document metadata. It primarily leverages a local language model, ollama, to extract and generate metadata for documents stored in a Paperless document library. The tool uses `reqwest` for making HTTP requests and `serde_json` for handling JSON data, ensuring seamless communication with the Paperless API and efficient data processing.
