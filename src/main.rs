@@ -1,6 +1,7 @@
 mod llm_api;
 mod paperless;
 mod logger;
+mod util;
 
 use ollama_rs::{
     Ollama,
@@ -135,7 +136,11 @@ async fn process_documents(client: &Client, ollama: &Ollama, model: &str, base_u
                                 slog_scope::debug!("Extracted JSON Object: {}", json_str);
 
                                 match serde_json::from_str(&json_str) {
-                                    Ok(json) => update_document_fields(client, document.id, &fields, &json, base_url, mode).await?,
+                                    Ok(json) => {
+                                        let types = infer_types_from_value(&json_value);
+                                        update_document_fields(client, document.id, &fields, &json, base_url, mode).await?
+                                        
+                                    },
                                     Err(e) => {
                                         slog_scope::error!("Error parsing llm response json {}", e.to_string());
                                         slog_scope::debug!("JSON String was: {}", &json_str);
