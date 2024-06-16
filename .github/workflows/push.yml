@@ -69,6 +69,13 @@ jobs:
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/doclytics:${{ env.BRANCH_NAME }}
           platforms: linux/amd64,linux/arm64
+      - name: Build and push to GitHub Container Registry
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ghcr.io/${{ github.repository_owner.lowercase }}/doclytics:${{ env.BRANCH_NAME }}
+          platforms: linux/amd64,linux/arm64
   release:
     runs-on: ubuntu-latest
     permissions:
