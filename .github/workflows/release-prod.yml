@@ -62,6 +62,9 @@ jobs:
   build-docker:
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
     if: ${{ github.ref }} != 'master' && ${{ github.ref }} != 'development'
     env:
       BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
