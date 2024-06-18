@@ -45,6 +45,9 @@ jobs:
 
   build-docker:
     runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
     if: ${{ github.ref }} != 'master' && ${{ github.ref }} != 'development'
     env:
       BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
@@ -60,9 +63,22 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Build and push
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/doclytics:${{ env.BRANCH_NAME }}
+          platforms: linux/amd64,linux/arm64
+      - name: 'Login to GitHub Container Registry'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{github.actor}}
+          password: ${{secrets.GITHUB_TOKEN}}
+      - name: Build and push to GitHub Container Registry
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ghcr.io/b-urb/doclytics:${{ env.BRANCH_NAME }}
           platforms: linux/amd64,linux/arm64
