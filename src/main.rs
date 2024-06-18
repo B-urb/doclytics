@@ -24,7 +24,7 @@ struct Document {
     id: u32,
     correspondent: Option<u32>,
     document_type: Option<u32>,
-    storage_path: Option<String>,
+    storage_path: Option<u32>,
     title: String,
     content: String,
     created: String,
@@ -32,7 +32,7 @@ struct Document {
     modified: String,
     added: String,
     archive_serial_number: Option<String>,
-    original_file_name: String,
+    original_file_name: Option<String>,
     archived_file_name: Option<String>,
     owner: Option<u32>,
     notes: Vec<String>,
@@ -63,6 +63,21 @@ struct Field {
     data_type: String,
 }
 
+#[derive(Clone, Copy)]
+enum Mode {
+    Create,
+    NoCreate,
+}
+impl Mode {
+    fn from_int(value: i32) -> Self {
+        match value {
+            1 => Mode::Create,
+            0 => Mode::NoCreate,
+            _ => Mode::NoCreate,
+        }
+    }
+}
+
 
 // Initialize the HTTP client with Paperless API token and base URL
 fn init_paperless_client(token: &str) -> Client {
@@ -86,7 +101,8 @@ fn init_ollama_client(host: &str, port: u16, secure_endpoint: bool) -> Ollama {
 
 // Refactor the main process into a function for better readability
 async fn process_documents(client: &Client, ollama: &Ollama, model: &str, base_url: &str, filter: &str) -> Result<(), Box<dyn std::error::Error>> {
-    let language= env::var("LANGUAGE").unwrap_or_else(|_| "EN".to_string()).to_uppercase();
+
+  let language= env::var("LANGUAGE").unwrap_or_else(|_| "EN".to_string()).to_uppercase();
     let base_prompt;
 
     match language.as_ref(){
@@ -114,8 +130,11 @@ async fn process_documents(client: &Client, ollama: &Ollama, model: &str, base_u
           delimiting the json object ".to_string()
     };
 
-    let prompt_base= env::var("BASE_PROMPT").unwrap_or_else(|_| base_prompt.to_string());     
+    let prompt_base = env::var("BASE_PROMPT").unwrap_or_else(|_| base_prompt.to_string());     
     
+    let mode_env = env::var("MODE").unwrap_or_else(|_| "0".to_string());
+    let mode_int = mode_env.parse::<i32>().unwrap_or(0);
+    let mode = Mode::from_int(mode_int);
     let fields = query_custom_fields(client, base_url).await?;
     match get_data_from_paperless(&client, &base_url, filter).await {
         Ok(data) => {
@@ -135,7 +154,7 @@ async fn process_documents(client: &Client, ollama: &Ollama, model: &str, base_u
                                 slog_scope::debug!("Extracted JSON Object: {}", json_str);
 
                                 match serde_json::from_str(&json_str) {
-                                    Ok(json) => update_document_fields(client, document.id, &fields, &json, base_url).await?,
+                                    Ok(json) => update_document_fields(client, document.id, &fields, &json, base_url, mode).await?,
                                     Err(e) => {
                                         slog_scope::error!("Error parsing llm response json {}", e.to_string());
                                         slog_scope::debug!("JSON String was: {}", &json_str);
@@ -216,3 +235,26 @@ fn extract_json_object(input: &str) -> Result<String, String> {
     }
 }
 
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_extract_json_object() {
+        let json_str = "Some text before JSON object {\"key\": \"value\"} Some text after";
+        assert_eq!(
+            extract_json_object(json_str).unwrap(),
+            "{\"key\": \"value\"}"
+        );
+
+        let json_array_str = "Some text before JSON array [1,2,3] Some text after";
+        assert_eq!(
+            extract_json_object(json_array_str).unwrap(),
+            "[1,2,3]"
+        );
+
+        let empty_json_str = "No JSON object or array here";
+        assert!(extract_json_object(empty_json_str).is_err());
+    }
+}
