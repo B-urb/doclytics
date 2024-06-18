@@ -86,14 +86,14 @@ jobs:
           username: ${{github.actor}}
           password: ${{secrets.GITHUB_TOKEN}}
       - name: Build and push
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/doclytics:${{ env.BRANCH_NAME }}
           platforms: linux/amd64,linux/arm64
       - name: Build and push to GitHub Container Registry
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: true
