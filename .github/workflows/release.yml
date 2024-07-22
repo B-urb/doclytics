@@ -33,7 +33,7 @@ jobs:
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG_NAME: ${{ github.ref }} # Assumes the tag name is the same as the ref. Adjust if necessary.
