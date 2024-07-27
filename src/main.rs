@@ -31,7 +31,7 @@ struct Document {
     created_date: Option<String>,
     modified: String,
     added: String,
-    archive_serial_number: Option<String>,
+    archive_serial_number: Option<u32>,
     original_file_name: Option<String>,
     archived_file_name: Option<String>,
     owner: Option<u32>,
