@@ -1,6 +1,11 @@
 mod llm_api;
 mod paperless;
 mod logger;
+mod paperless_tags;
+mod paperless_documenttypes;
+mod paperless_correspondents;
+mod util;
+mod error;
 
 use ollama_rs::{
     Ollama,
