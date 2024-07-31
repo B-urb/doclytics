@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::fmt;
 use reqwest::Client;
 use serde::de::StdError;
-use serde_json::Value;
+use serde_json::{Map, Value};
 use crate::{CustomField, Document, Field, Mode, Response};
 use serde::{Deserialize, Serialize};
 
@@ -171,7 +171,8 @@ pub async fn update_document_fields(
     }
     let url = format!("{}/api/documents/{}/", base_url, document_id);
     slog_scope::info!("Updating document with ID: {}", document_id);
-    slog_scope::debug!("Request Payload: {}", "");
+    slog_scope::debug!("Request Payload: {}", map_to_string(&payload));
+    
     for (key, value) in &payload {
         slog_scope::debug!("{}: {}", key, value);
     }
@@ -240,5 +241,10 @@ pub async fn create_custom_field(
         }
     }
 }
-
+fn map_to_string(map: &Map<String, Value>) -> String {
+    map.iter()
+        .map(|(key, value)| format!("{}: {}", key, value))
+        .collect::<Vec<String>>()
+        .join(", ")
+}
 
