@@ -6,10 +6,8 @@ use crate::Document;
 pub async fn generate_response(
     ollama: &Ollama,
     model: &String,
-    prompt_base: &String,
-    document: &Document,
+    prompt: String,
 ) -> std::result::Result<GenerationResponse, Box<dyn std::error::Error>> {
-    let prompt = format!("{} {}", document.content, prompt_base);
     let res = ollama
         .generate(GenerationRequest::new(model.clone(), prompt))
         .await;

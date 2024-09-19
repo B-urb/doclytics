@@ -1,9 +1,7 @@
 mod llm_api;
 mod paperless;
 mod logger;
-mod paperless_tags;
-mod paperless_documenttypes;
-mod paperless_correspondents;
+mod paperless_defaultfields;
 mod util;
 mod error;
 
@@ -129,7 +127,7 @@ async fn process_documents(client: &Client, ollama: &Ollama, model: &str, base_u
           Analyze the document to find the values for these fields and format the response as a \
           JSON object. Use the most likely answer for each field. \
           The response should contain only JSON data where the key and values are all in simple string \
-          format(no nested object) for direct parsing by another program. So now additional text or \
+          format(no nested object) for direct parsing by another program. So no additional text or \
           explanation, no introtext, the answer should start and end with curly brackets \
           delimiting the json object ".to_string()
     };
@@ -166,38 +164,44 @@ async fn process_documents(client: &Client, ollama: &Ollama, model: &str, base_u
 }
 
 async fn process_documents_batch(documents: &Vec<Document>, ollama: &Ollama, model: &str, prompt_base: &String, client: &Client, fields: &Vec<Field>, base_url: &str, mode: Mode) -> Result<(), Box<dyn std::error::Error>> {
+    
     Ok(for document in documents {
         slog_scope::trace!("Document Content: {}", document.content);
         slog_scope::info!("Generate Response with LLM {}", "model");
         slog_scope::debug!("with Prompt: {}", prompt_base);
 
-        match generate_response(ollama, &model.to_string(), &prompt_base.to_string(), &document).await {
-            Ok(res) => {
-                // Log the response from the generate_response call
-                slog_scope::debug!("LLM Response: {}", res.response);
+        generate_response_and_extract_data(ollama, &model, &prompt_base, client, &fields, base_url, mode, &document).await;
+    })
+}
 
-                match extract_json_object(&res.response) {
-                    Ok(json_str) => {
-                        // Log successful JSON extraction
-                        slog_scope::debug!("Extracted JSON Object: {}", json_str);
+async fn generate_response_and_extract_data(ollama: &Ollama, model: &str, prompt_base: &String, client: &Client, fields: &Vec<Field>, base_url: &str, mode: Mode, document: &Document) {
+    let prompt = format!("{} {}", prompt_base, document.content);
 
-                        match serde_json::from_str(&json_str) {
-                            Ok(json) => update_document_fields(client, document.id, &fields, &json, base_url, mode).await?,
-                            Err(e) => {
-                                slog_scope::error!("Error parsing llm response json {}", e.to_string());
-                                slog_scope::debug!("JSON String was: {}", &json_str);
-                            }
+    match generate_response(ollama, &model.to_string(), prompt).await {
+        Ok(res) => {
+            // Log the response from the generate_response call
+            slog_scope::debug!("LLM Response: {}", res.response);
+
+            match extract_json_object(&res.response) {
+                Ok(json_str) => {
+                    // Log successful JSON extraction
+                    slog_scope::debug!("Extracted JSON Object: {}", json_str);
+
+                    match serde_json::from_str(&json_str) {
+                        Ok(json) => update_document_fields(client, document.id, &fields, &json, base_url, mode).await?,
+                        Err(e) => {
+                            slog_scope::error!("Error parsing llm response json {}", e.to_string());
+                            slog_scope::debug!("JSON String was: {}", &json_str);
                         }
                     }
-                    Err(e) => slog_scope::error!("{}", e),
                 }
-            }
-            Err(e) => {
-                slog_scope::error!("Error generating llm response: {}", e);
-                continue;
+                Err(e) => slog_scope::error!("{}", e),
             }
         }
-    })
+        Err(e) => {
+            slog_scope::error!("Error generating llm response: {}", e);
+        }
+    }
 }
 
 #[tokio::main]
