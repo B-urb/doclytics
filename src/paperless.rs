@@ -10,7 +10,7 @@ pub async fn get_data_from_paperless(
     client: &Client,
     url: &str,
     filter: &str,
-) -> Result<Vec<Document>, Box<dyn StdError + Send + Sync>> {
+) -> Result<Response<Document>, Box<dyn StdError + Send + Sync>> {
     // Read token from environment
     //Define filter string
     let filter = filter;
@@ -34,26 +34,65 @@ pub async fn get_data_from_paperless(
             //let error_part = value.pointer("/results/0").unwrap();
             //println!("Error part: {}", error_part);
             // Parse the JSON string into the Response struct
-            let data: Result<Response<Document>, _> = serde_json::from_str(json);
-            match data {
-                Ok(data) => {
-                    slog_scope::info!("Successfully retrieved {} Documents", data.results.len());
-                    Ok(data.results)
-                }
-                Err(e) => {
-                    let column = e.column();
-                    let start = (column as isize - 30).max(0) as usize;
-                    let end = (column + 30).min(json.len());
-                    slog_scope::error!("Error while creating json of document response from paperless {}", e);
-                    slog_scope::error!("Error at column {}: {}", column, &json[start..end]);
-                    slog_scope::trace!("Error occured in json {}", &json);
-                    Err(e.into()) // Remove the semicolon here
-                }
-            }
+            return parse_document_response(json);
         }
         Err(e) => {
             slog_scope::error!("Error while fetching documents from paperless: {}",e);
             Err(e.into())
+        }
+    }
+}
+
+pub async fn get_next_data_from_paperless(client: &Client,
+                                          url: &str,
+) -> Result<Response<Document>, Box<dyn StdError + Send + Sync>> {
+    // Read token from environment
+    //Define filter string
+    slog_scope::info!("Retrieve next page {}", url);
+    let response = client.get(format!("{}", url)).send().await?;
+
+
+    let response_result = response.error_for_status();
+    match response_result {
+        Ok(data) => {
+            let body = data.text().await?;
+            slog_scope::trace!("Response from server while fetching documents: {}", body);
+
+            // Remove the "Document content: " prefix
+            let json = body.trim_start_matches("Document content: ");
+            //println!("{}",json);
+            // Parse the JSON string into a generic JSON structure
+            //let value: serde_json::Value = serde_json::from_str(json).unwrap();
+
+            // Print the part of the JSON structure that's causing the error
+            //let error_part = value.pointer("/results/0").unwrap();
+            //println!("Error part: {}", error_part);
+            // Parse the JSON string into the Response struct
+            return parse_document_response(json);
+        }
+        Err(e) => {
+            slog_scope::error!("Error while fetching documents from paperless: {}",e);
+            Err(e.into())
+        }
+    }
+}
+
+
+pub fn parse_document_response(json: &str) -> Result<Response<Document>, Box<dyn StdError + Send + Sync>> {
+    let data: Result<Response<Document>, _> = serde_json::from_str(json);
+    match data {
+        Ok(data) => {
+            slog_scope::info!("Successfully retrieved {} Documents", data.results.len());
+            Ok(data)
+        }
+        Err(e) => {
+            let column = e.column();
+            let start = (column as isize - 30).max(0) as usize;
+            let end = (column + 30).min(json.len());
+            slog_scope::error!("Error while creating json of document response from paperless {}", e);
+            slog_scope::error!("Error at column {}: {}", column, &json[start..end]);
+            slog_scope::trace!("Error occured in json {}", &json);
+            Err(e.into()) // Remove the semicolon here
         }
     }
 }
@@ -110,7 +149,7 @@ pub async fn update_document_fields(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let mut custom_fields = Vec::new();
 
-// Use `if let` to conditionally execute code if the 'tagged' field is found.
+    // Use `if let` to conditionally execute code if the 'tagged' field is found.
     let field = match fields.iter().find(|&f| f.name == "tagged") {
         Some(field) => field,
         None => {
@@ -124,7 +163,7 @@ pub async fn update_document_fields(
         value: Some(serde_json::json!(true)),
     };
 
-// Add this tagged_field to your custom_fields collection or use it as needed.
+    // Add this tagged_field to your custom_fields collection or use it as needed.
     custom_fields.push(tagged_field);
 
     for (key, value) in metadata {
@@ -135,8 +174,7 @@ pub async fn update_document_fields(
         if let Some(field) = fields.iter().find(|&f| f.name == *key) {
             let custom_field = convert_field_to_custom_field(value, field);
             custom_fields.push(custom_field);
-        }
-        else {
+        } else {
             if matches!(mode, Mode::Create) {
                 slog_scope::info!("Creating field: {}", key);
                 let create_field = CreateField {
@@ -144,20 +182,20 @@ pub async fn update_document_fields(
                     data_type: "Text".to_string(),
                     default_value: None,
                 };
-               match create_custom_field(client, &create_field, base_url).await
-               {
-                   Ok(new_field) => {
-                       let custom_field = convert_field_to_custom_field(value, &new_field);
-                       custom_fields.push(custom_field)
-                   },
-                   Err(e) => {
-                       slog_scope::error!("Error: {} creating custom field: {}, skipping...",e, key)
-                   }
-               }
+                match create_custom_field(client, &create_field, base_url).await
+                {
+                    Ok(new_field) => {
+                        let custom_field = convert_field_to_custom_field(value, &new_field);
+                        custom_fields.push(custom_field)
+                    }
+                    Err(e) => {
+                        slog_scope::error!("Error: {} creating custom field: {}, skipping...",e, key)
+                    }
+                }
             }
         }
     }
-// Check if tagged_field_id has a value and then proceed.
+    // Check if tagged_field_id has a value and then proceed.
 
     let mut payload = serde_json::Map::new();
 
@@ -172,7 +210,7 @@ pub async fn update_document_fields(
     let url = format!("{}/api/documents/{}/", base_url, document_id);
     slog_scope::info!("Updating document with ID: {}", document_id);
     slog_scope::debug!("Request Payload: {}", map_to_string(&payload));
-    
+
     for (key, value) in &payload {
         slog_scope::debug!("{}: {}", key, value);
     }
@@ -227,7 +265,7 @@ pub async fn create_custom_field(
             match field {
                 Ok(field) => {
                     Ok(field.results[0].clone()) // TODO: improve
-                },
+                }
                 Err(e) => {
                     slog_scope::debug!("Creating field response: {}", body);
                     slog_scope::error!("Error parsing response from new field: {}", e);
