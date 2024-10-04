@@ -25,7 +25,7 @@ impl PaperlessDefaultFieldType {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-struct DefaultField {
+pub struct DefaultField {
     #[serde(skip_serializing_if = "Option::is_none")] // Skip `id` if it's None
     id: Option<u32>,
     slug: String,
@@ -166,13 +166,11 @@ pub async fn query_custom_fields(
     }
 }
 
-pub async fn get_default_fields<T>(
+pub async fn get_default_fields(
     client: &Client,
     base_url: &str,
     endpoint: PaperlessDefaultFieldType,
-) -> Result<Vec<T>, Box<dyn std::error::Error>>
-where
-    T: DeserializeOwned + Debug,
+) -> Result<Vec<DefaultField>, Box<dyn std::error::Error>>
 {
     slog_scope::info!("Fetching custom fields from paperless at {}", base_url);
     let res = client
@@ -188,7 +186,7 @@ where
 
             // Remove the "Field: " prefix if necessary
             let json = body.trim_start_matches("Field: ");
-            let data: Result<Response<T>, _> = serde_json::from_str(json);
+            let data: Result<Response<DefaultField>, _> = serde_json::from_str(json);
             match data {
                 Ok(data) => {
                     slog_scope::info!("{}: {:?}", endpoint.to_string(), data.results);
@@ -313,7 +311,7 @@ pub async fn update_document_default_fields(
     base_url: &str,
     endpoint: PaperlessDefaultFieldType,
     mode: Mode,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Option<Box<dyn std::error::Error>> {
     let mut default_field_ids = Vec::new();
 
     for value in data {
@@ -348,7 +346,7 @@ pub async fn update_document_default_fields(
 
     if payload.is_empty() {
         slog_scope::warn!("{}", "payload is empty, not updating fields");
-        return Err(Box::new(fmt::Error::default())); // Use a standard library error type like fmt::Error.
+        return None
     }
     let url = format!("{}/api/documents/{}/", base_url, document_id);
     slog_scope::info!("Updating document with ID: {}", document_id);
@@ -357,18 +355,17 @@ pub async fn update_document_default_fields(
     for (key, value) in &payload {
         slog_scope::debug!("{}: {}", key, value);
     }
-    let res = client.patch(&url).json(&payload).send().await?;
-    let response_result = res.error_for_status();
+    let res = client.patch(&url).json(&payload).send().await;
+    let response_result = res;
     match response_result {
         Ok(data) => {
-            let body = data.text().await?;
-            slog_scope::trace!("{}", body);
+            let body = data.text().await;
             slog_scope::info!("Document with ID: {} successfully updated", document_id);
-            Ok(())
+            None
         }
         Err(e) => {
             slog_scope::error!("Error while updating document fields: {}", e);
-            Err(e.into())
+            Some(Box::new(e))
         }
     }
 }

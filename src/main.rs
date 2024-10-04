@@ -188,7 +188,7 @@ async fn generate_response_and_extract_data(ollama: &Ollama, model: &str, prompt
                     slog_scope::debug!("Extracted JSON Object: {}", json_str);
 
                     match serde_json::from_str(&json_str) {
-                        Ok(json) => update_document_fields(client, document.id, &fields, &json, base_url, mode).await?,
+                        Ok(json) => update_document_fields(client, document.id, &fields, &json, base_url, mode).await.unwrap_or_default(), //TODO: Fix unwrap
                         Err(e) => {
                             slog_scope::error!("Error parsing llm response json {}", e.to_string());
                             slog_scope::debug!("JSON String was: {}", &json_str);
