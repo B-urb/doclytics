@@ -436,10 +436,10 @@ pub async fn create_default_field(
         Ok(data) => {
             let body = data.text().await?;
             slog_scope::trace!("{}", body);
-            let field: Result<Response<DefaultField>, _> = serde_json::from_str(&body);
+            let field: Result<DefaultField, _> = serde_json::from_str(&body);
             match field {
                 Ok(field) => {
-                    Ok(field.results[0].clone()) // TODO: improve
+                    Ok(field) // TODO: improve
                 }
                 Err(e) => {
                     slog_scope::debug!("Creating field response: {}", body);

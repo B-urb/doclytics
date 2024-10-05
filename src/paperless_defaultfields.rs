@@ -5,27 +5,27 @@ use crate::{extract_json_object, Document, Field, Mode};
 use crate::llm_api::generate_response;
 use crate::paperless::{get_default_fields, update_document_default_fields, update_document_fields, DefaultField, PaperlessDefaultFieldType};
 
-const ANSWER_INSTRUCTION: String = "The result should be a only a json array of string and nothing else. The answer should start and end with the square bracket. The document is:".to_string();
+ const ANSWER_INSTRUCTION: &'static str = "The result should be a only a json array of string and nothing else. The answer should start and end with the square bracket. The document is: ";
 async fn construct_document_type_prompt(client: &Client, base_url: &str) -> Result<String, Box<dyn StdError + Send + Sync>> {
     let document_types = get_default_fields(client, base_url, PaperlessDefaultFieldType::DocumentType).await;
-    let base_prompt = format!("Determine the type of this document from the following available document types: {:?}, if none of these fit the document, create a new one: ", document_types);
+    let base_prompt = format!("Determine the type of this document from the following available document types: {:?}, if none of these fit the document, create a new one. ", document_types);
     Ok(base_prompt)
 }
 
 
 async fn construct_tag_prompt(client: &Client, base_url: &str) -> Result<String, Box<dyn StdError + Send + Sync>> {
     let document_types = get_default_fields(client, base_url, PaperlessDefaultFieldType::Tag).await;
-    let base_prompt = format!("Determine the type of this document from the following available document types: {:?}, if none of these fit the document, create a new one: ", document_types);
+    let base_prompt = format!("Determine the type of this document from the following available document types: {:?}, if none of these fit the document, create a new one. ", document_types);
     Ok(base_prompt)
 }
 async fn construct_correspondent_prompt(client: &Client, base_url: &str) -> Result<String, Box<dyn StdError + Send + Sync>> {
     let document_types = get_default_fields(client, base_url, PaperlessDefaultFieldType::Correspondent).await;
-    let base_prompt = format!("Determine possible correspondents from this document from the following available correspondents: {:?}, if none of these fit the document, create a new one. The result should be a only a json array of string and nothing else. The answer should start and end with the square bracket. The document is: ", document_types);
+    let base_prompt = format!("Determine possible correspondents from this document from the following available correspondents: {:?}, if none of these fit the document, create a new one. The result should be a only a json array of string and nothing else. The answer should start and end with the square bracket. ", document_types);
     Ok(base_prompt)
 }
 
 
-async fn generate_response_and_extract_data(ollama: &Ollama, model: &str, prompt_base: &String, client: &Client, fields: Vec<DefaultField>, base_url: &str, document: &Document, mode: Mode, field_type: PaperlessDefaultFieldType) -> Option<Box<dyn StdError>> {
+pub async fn extract_default_fields(ollama: &Ollama, model: &str, prompt_base: &String, client: &Client, fields: Vec<DefaultField>, base_url: &str, document: &Document, mode: Mode, field_type: PaperlessDefaultFieldType) -> Option<Box<dyn StdError>> {
     let prompt = match field_type {
         PaperlessDefaultFieldType::Correspondent => construct_correspondent_prompt(client, base_url).await,
         PaperlessDefaultFieldType::Tag => construct_tag_prompt(client, base_url).await,
@@ -33,7 +33,8 @@ async fn generate_response_and_extract_data(ollama: &Ollama, model: &str, prompt
     };
     match prompt {
         Ok(prompt) => {
-            match generate_response(ollama, &model.to_string(), prompt).await {
+            let prompt_with_document = prompt + &*ANSWER_INSTRUCTION + &*document.content;
+            match generate_response(ollama, &model.to_string(), prompt_with_document).await {
                 Ok(res) => {
                     // Log the response from the generate_response call
                     slog_scope::debug!("LLM Response: {}", res.response);

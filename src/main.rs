@@ -19,8 +19,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value};
 use std::env;
 use crate::llm_api::generate_response;
-use crate::paperless::{get_data_from_paperless, get_next_data_from_paperless, query_custom_fields, update_document_fields};
+use crate::paperless::{get_data_from_paperless, get_default_fields, get_next_data_from_paperless, query_custom_fields, update_document_fields, PaperlessDefaultFieldType};
 use substring::Substring;
+use crate::paperless_defaultfields::extract_default_fields;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct Document {
@@ -171,6 +172,13 @@ async fn process_documents_batch(documents: &Vec<Document>, ollama: &Ollama, mod
         slog_scope::debug!("with Prompt: {}", prompt_base);
 
         generate_response_and_extract_data(ollama, &model, &prompt_base, client, &fields, base_url, mode, &document).await;
+        let default_fields = get_default_fields(client, base_url, PaperlessDefaultFieldType::Tag).await;
+        match default_fields {
+            Ok(default_fields) => {
+                extract_default_fields(ollama, &model, &prompt_base, client, default_fields, base_url, &document, mode, PaperlessDefaultFieldType::Tag).await;
+            }
+            Err(e) => slog_scope::error!("Error while interacting with paperless: {}", e),
+        }
     })
 }
 
