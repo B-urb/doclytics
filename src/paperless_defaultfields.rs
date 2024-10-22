@@ -5,7 +5,7 @@ use crate::{extract_json_object, Document, Field, Mode};
 use crate::llm_api::generate_response;
 use crate::paperless::{get_default_fields, update_document_default_fields, update_document_fields, DefaultField, PaperlessDefaultFieldType};
 
- const ANSWER_INSTRUCTION: &'static str = "The result should be a only a json array of string and nothing else. The answer should start and end with the square bracket. The document is: ";
+ const ANSWER_INSTRUCTION: &'static str = "The result should be a only a non-nested one dimensional json array of correctly quoted strings and nothing else. The answer should start and end with the square bracket. The document is: ";
 async fn construct_document_type_prompt(client: &Client, base_url: &str) -> Result<String, Box<dyn StdError + Send + Sync>> {
     let document_types = get_default_fields(client, base_url, PaperlessDefaultFieldType::DocumentType).await;
     let base_prompt = format!("Determine the type of this document from the following available document types: {:?}, if none of these fit the document, create a new one. ", document_types);

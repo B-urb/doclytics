@@ -184,20 +184,20 @@ async fn process_documents_batch(documents: &Vec<Document>, ollama: &Ollama, mod
                     Mode::NoAnalyze => (),
                     _ =>
                         if let Some(err) = extract_default_fields(ollama, &model, &prompt_base, client, &default_fields, base_url, &document, tag_mode, PaperlessDefaultFieldType::Tag).await {
-                            return Err(err);
+                            slog_scope::error!("Error while getting tags: {:?}", err);
                         }
                 }
                 match doctype_mode {
                     Mode::NoAnalyze => (),
                     _ =>
                         if let Some(err) = extract_default_fields(ollama, &model, &prompt_base, client, &default_fields, base_url, &document, doctype_mode, PaperlessDefaultFieldType::DocumentType).await {
-                            return Err(err);
+                            slog_scope::error!("Error while getting doctype: {:?}", err);
                         }
                 }
                 match correspondent_mode {
                     Mode::NoAnalyze => (),
                     _ => if let Some(err) = extract_default_fields(ollama, &model, &prompt_base, client, &default_fields, base_url, &document, correspondent_mode, PaperlessDefaultFieldType::Correspondent).await {
-                        return Err(err);
+                        slog_scope::error!("Error while getting correspondents: {:?}", err);
                     }
                 }
             }
