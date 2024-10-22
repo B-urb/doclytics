@@ -25,7 +25,7 @@ async fn construct_correspondent_prompt(client: &Client, base_url: &str) -> Resu
 }
 
 
-pub async fn extract_default_fields(ollama: &Ollama, model: &str, prompt_base: &String, client: &Client, fields: Vec<DefaultField>, base_url: &str, document: &Document, mode: Mode, field_type: PaperlessDefaultFieldType) -> Option<Box<dyn StdError>> {
+pub async fn extract_default_fields(ollama: &Ollama, model: &str, prompt_base: &String, client: &Client, fields: &Vec<DefaultField>, base_url: &str, document: &Document, mode: Mode, field_type: PaperlessDefaultFieldType) -> Option<Box<dyn StdError>> {
     let prompt = match field_type {
         PaperlessDefaultFieldType::Correspondent => construct_correspondent_prompt(client, base_url).await,
         PaperlessDefaultFieldType::Tag => construct_tag_prompt(client, base_url).await,

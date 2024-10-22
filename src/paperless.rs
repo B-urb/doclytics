@@ -6,6 +6,7 @@ use serde::de::{DeserializeOwned, StdError};
 use serde_json::{Map, Value};
 use crate::{CustomField, Document, Field, Mode, Response};
 use serde::{Deserialize, Serialize};
+use crate::util::normalize_string;
 
 #[derive(Clone, Copy)]
 pub enum PaperlessDefaultFieldType {
@@ -316,7 +317,7 @@ pub async fn update_document_default_fields(
 
     for value in data {
 
-        if let Some(field) = fields.iter().find(|&f| f.name == *value) {
+        if let Some(field) = fields.iter().find(|&f| normalize_string(&*f.name) == normalize_string(&*value)) {
             let default_field_id = field.id;
             default_field_ids.push(default_field_id);
         } else {

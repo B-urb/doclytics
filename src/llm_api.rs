@@ -1,7 +1,6 @@
 use ollama_rs::generation::completion::GenerationResponse;
 use ollama_rs::generation::completion::request::GenerationRequest;
 use ollama_rs::Ollama;
-use crate::Document;
 
 pub async fn generate_response(
     ollama: &Ollama,

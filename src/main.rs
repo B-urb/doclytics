@@ -69,14 +69,16 @@ struct Field {
 
 #[derive(Clone, Copy)]
 enum Mode {
+    NoAnalyze,
     Create,
     NoCreate,
 }
 impl Mode {
     fn from_int(value: i32) -> Self {
         match value {
-            1 => Mode::Create,
-            0 => Mode::NoCreate,
+            2 => Mode::Create,
+            1 => Mode::NoCreate,
+            0 => Mode::NoAnalyze,
             _ => Mode::NoCreate,
         }
     }
@@ -165,7 +167,10 @@ async fn process_documents(client: &Client, ollama: &Ollama, model: &str, base_u
 }
 
 async fn process_documents_batch(documents: &Vec<Document>, ollama: &Ollama, model: &str, prompt_base: &String, client: &Client, fields: &Vec<Field>, base_url: &str, mode: Mode) -> Result<(), Box<dyn std::error::Error>> {
-    
+    let tag_mode = create_mode_from_env("DOCLYTICS_TAGS");
+    let doctype_mode = create_mode_from_env("DOCLYTICS_DOCTYPE");
+    let correspondent_mode = create_mode_from_env("DOCLYTICS_CORRESPONDENT");
+
     Ok(for document in documents {
         slog_scope::trace!("Document Content: {}", document.content);
         slog_scope::info!("Generate Response with LLM {}", "model");
@@ -175,7 +180,26 @@ async fn process_documents_batch(documents: &Vec<Document>, ollama: &Ollama, mod
         let default_fields = get_default_fields(client, base_url, PaperlessDefaultFieldType::Tag).await;
         match default_fields {
             Ok(default_fields) => {
-                extract_default_fields(ollama, &model, &prompt_base, client, default_fields, base_url, &document, mode, PaperlessDefaultFieldType::Tag).await;
+                match tag_mode {
+                    Mode::NoAnalyze => (),
+                    _ =>
+                        if let Some(err) = extract_default_fields(ollama, &model, &prompt_base, client, &default_fields, base_url, &document, tag_mode, PaperlessDefaultFieldType::Tag).await {
+                            return Err(err);
+                        }
+                }
+                match doctype_mode {
+                    Mode::NoAnalyze => (),
+                    _ =>
+                        if let Some(err) = extract_default_fields(ollama, &model, &prompt_base, client, &default_fields, base_url, &document, doctype_mode, PaperlessDefaultFieldType::DocumentType).await {
+                            return Err(err);
+                        }
+                }
+                match correspondent_mode {
+                    Mode::NoAnalyze => (),
+                    _ => if let Some(err) = extract_default_fields(ollama, &model, &prompt_base, client, &default_fields, base_url, &document, correspondent_mode, PaperlessDefaultFieldType::Correspondent).await {
+                        return Err(err);
+                    }
+                }
             }
             Err(e) => slog_scope::error!("Error while interacting with paperless: {}", e),
         }
@@ -211,7 +235,6 @@ async fn generate_response_and_extract_data(ollama: &Ollama, model: &str, prompt
         }
     }
 }
-
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     logger::init(); // Initializes the global logger
@@ -271,7 +294,11 @@ fn extract_json_object(input: &str) -> Result<String, String> {
     }
 }
 
-
+fn create_mode_from_env(env_key: &str) -> Mode {
+    let mode_env = env::var(env_key).unwrap_or_else(|_| "1".to_string());
+    let mode_int = mode_env.parse::<i32>().unwrap_or(1);
+    Mode::from_int(mode_int)
+}
 #[cfg(test)]
 mod tests {
     use super::*;
