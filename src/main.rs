@@ -1,6 +1,9 @@
 mod llm_api;
 mod paperless;
 mod logger;
+mod paperless_defaultfields;
+mod util;
+mod error;
 
 use ollama_rs::{
     Ollama,
@@ -16,8 +19,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value};
 use std::env;
 use crate::llm_api::generate_response;
-use crate::paperless::{get_data_from_paperless, get_next_data_from_paperless, query_custom_fields, update_document_fields};
+use crate::paperless::{get_data_from_paperless, get_default_fields, get_next_data_from_paperless, query_custom_fields, update_document_fields, PaperlessDefaultFieldType};
 use substring::Substring;
+use crate::paperless_defaultfields::extract_default_fields;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct Document {
@@ -65,14 +69,16 @@ struct Field {
 
 #[derive(Clone, Copy)]
 enum Mode {
+    NoAnalyze,
     Create,
     NoCreate,
 }
 impl Mode {
     fn from_int(value: i32) -> Self {
         match value {
-            1 => Mode::Create,
-            0 => Mode::NoCreate,
+            2 => Mode::Create,
+            1 => Mode::NoCreate,
+            0 => Mode::NoAnalyze,
             _ => Mode::NoCreate,
         }
     }
@@ -124,7 +130,7 @@ async fn process_documents(client: &Client, ollama: &Ollama, model: &str, base_u
           Analyze the document to find the values for these fields and format the response as a \
           JSON object. Use the most likely answer for each field. \
           The response should contain only JSON data where the key and values are all in simple string \
-          format(no nested object) for direct parsing by another program. So now additional text or \
+          format(no nested object) for direct parsing by another program. So no additional text or \
           explanation, no introtext, the answer should start and end with curly brackets \
           delimiting the json object ".to_string()
     };
@@ -161,40 +167,74 @@ async fn process_documents(client: &Client, ollama: &Ollama, model: &str, base_u
 }
 
 async fn process_documents_batch(documents: &Vec<Document>, ollama: &Ollama, model: &str, prompt_base: &String, client: &Client, fields: &Vec<Field>, base_url: &str, mode: Mode) -> Result<(), Box<dyn std::error::Error>> {
+    let tag_mode = create_mode_from_env("DOCLYTICS_TAGS");
+    let doctype_mode = create_mode_from_env("DOCLYTICS_DOCTYPE");
+    let correspondent_mode = create_mode_from_env("DOCLYTICS_CORRESPONDENT");
+
     Ok(for document in documents {
         slog_scope::trace!("Document Content: {}", document.content);
         slog_scope::info!("Generate Response with LLM {}", "model");
         slog_scope::debug!("with Prompt: {}", prompt_base);
 
-        match generate_response(ollama, &model.to_string(), &prompt_base.to_string(), &document).await {
-            Ok(res) => {
-                // Log the response from the generate_response call
-                slog_scope::debug!("LLM Response: {}", res.response);
-
-                match extract_json_object(&res.response) {
-                    Ok(json_str) => {
-                        // Log successful JSON extraction
-                        slog_scope::debug!("Extracted JSON Object: {}", json_str);
-
-                        match serde_json::from_str(&json_str) {
-                            Ok(json) => update_document_fields(client, document.id, &fields, &json, base_url, mode).await?,
-                            Err(e) => {
-                                slog_scope::error!("Error parsing llm response json {}", e.to_string());
-                                slog_scope::debug!("JSON String was: {}", &json_str);
-                            }
+        generate_response_and_extract_data(ollama, &model, &prompt_base, client, &fields, base_url, mode, &document).await;
+        let default_fields = get_default_fields(client, base_url, PaperlessDefaultFieldType::Tag).await;
+        match default_fields {
+            Ok(default_fields) => {
+                match tag_mode {
+                    Mode::NoAnalyze => (),
+                    _ =>
+                        if let Some(err) = extract_default_fields(ollama, &model, &prompt_base, client, &default_fields, base_url, &document, tag_mode, PaperlessDefaultFieldType::Tag).await {
+                            slog_scope::error!("Error while getting tags: {:?}", err);
                         }
+                }
+                match doctype_mode {
+                    Mode::NoAnalyze => (),
+                    _ =>
+                        if let Some(err) = extract_default_fields(ollama, &model, &prompt_base, client, &default_fields, base_url, &document, doctype_mode, PaperlessDefaultFieldType::DocumentType).await {
+                            slog_scope::error!("Error while getting doctype: {:?}", err);
+                        }
+                }
+                match correspondent_mode {
+                    Mode::NoAnalyze => (),
+                    _ => if let Some(err) = extract_default_fields(ollama, &model, &prompt_base, client, &default_fields, base_url, &document, correspondent_mode, PaperlessDefaultFieldType::Correspondent).await {
+                        slog_scope::error!("Error while getting correspondents: {:?}", err);
                     }
-                    Err(e) => slog_scope::error!("{}", e),
                 }
             }
-            Err(e) => {
-                slog_scope::error!("Error generating llm response: {}", e);
-                continue;
-            }
+            Err(e) => slog_scope::error!("Error while interacting with paperless: {}", e),
         }
     })
 }
 
+async fn generate_response_and_extract_data(ollama: &Ollama, model: &str, prompt_base: &String, client: &Client, fields: &Vec<Field>, base_url: &str, mode: Mode, document: &Document) {
+    let prompt = format!("{} {}", prompt_base, document.content);
+
+    match generate_response(ollama, &model.to_string(), prompt).await {
+        Ok(res) => {
+            // Log the response from the generate_response call
+            slog_scope::debug!("LLM Response: {}", res.response);
+
+            match extract_json_object(&res.response) {
+                Ok(json_str) => {
+                    // Log successful JSON extraction
+                    slog_scope::debug!("Extracted JSON Object: {}", json_str);
+
+                    match serde_json::from_str(&json_str) {
+                        Ok(json) => update_document_fields(client, document.id, &fields, &json, base_url, mode).await.unwrap_or_default(), //TODO: Fix unwrap
+                        Err(e) => {
+                            slog_scope::error!("Error parsing llm response json {}", e.to_string());
+                            slog_scope::debug!("JSON String was: {}", &json_str);
+                        }
+                    }
+                }
+                Err(e) => slog_scope::error!("{}", e),
+            }
+        }
+        Err(e) => {
+            slog_scope::error!("Error generating llm response: {}", e);
+        }
+    }
+}
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     logger::init(); // Initializes the global logger
@@ -254,7 +294,11 @@ fn extract_json_object(input: &str) -> Result<String, String> {
     }
 }
 
-
+fn create_mode_from_env(env_key: &str) -> Mode {
+    let mode_env = env::var(env_key).unwrap_or_else(|_| "1".to_string());
+    let mode_int = mode_env.parse::<i32>().unwrap_or(1);
+    Mode::from_int(mode_int)
+}
 #[cfg(test)]
 mod tests {
     use super::*;
