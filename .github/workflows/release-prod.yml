@@ -93,6 +93,8 @@ jobs:
           username: ${{github.actor}}
           password: ${{secrets.GITHUB_TOKEN}}
       - name: Build and push
+        env:
+          VERSION: ${{ github.head_ref || github.ref_name }}
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -100,6 +102,8 @@ jobs:
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/doclytics:${{ env.BRANCH_NAME }}
           platforms: linux/amd64,linux/arm64
       - name: Build and push to GitHub Container Registry
+        env:
+          VERSION: ${{ github.head_ref || github.ref_name }}
         uses: docker/build-push-action@v6
         with:
           context: .
