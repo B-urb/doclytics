@@ -20,7 +20,7 @@ async fn construct_tag_prompt(client: &Client, base_url: &str) -> Result<String,
 }
 async fn construct_correspondent_prompt(client: &Client, base_url: &str) -> Result<String, Box<dyn StdError + Send + Sync>> {
     let document_types = get_default_fields(client, base_url, PaperlessDefaultFieldType::Correspondent).await;
-    let base_prompt = format!("Determine possible correspondents from this document from the following available correspondents: {:?}, if none of these fit the document, create a new one. The result should be a only a json array of string and nothing else. The answer should start and end with the square bracket. ", document_types);
+    let base_prompt = format!("Determine possible correspondents from this document from the following available correspondents: {:?}, if none of these fit the document, create a maximum of one new one. The result should be a only a json array of string and nothing else. The answer should start and end with the square bracket. ", document_types);
     Ok(base_prompt)
 }
 
