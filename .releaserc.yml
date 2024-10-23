@@ -18,3 +18,4 @@ branches:
   - name: "development"
     prerelease: "rc"
     channel: "false"
+tagFormat: "${version}"

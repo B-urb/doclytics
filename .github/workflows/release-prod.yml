@@ -36,6 +36,7 @@ jobs:
       - name: Update Cargo Version
         env:
           VERSION: ${{ github.head_ref || github.ref_name }}
+        run: cargo set-version ${{ env.VERSION }}
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
       - name: Upload artifact
