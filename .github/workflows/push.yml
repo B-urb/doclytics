@@ -47,9 +47,6 @@ jobs:
   build-docker:
     needs: build
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        registry: ['ghcr.io/b-urb/doclytics', 'bjoern5urban/doclytics']
     permissions:
       packages: write
       contents: read
@@ -77,7 +74,10 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ matrix.registry }}:${{ env.BRANCH_NAME }}
+          tags:
+            - ghcr.io/b-urb/doclytics:${{ env.BRANCH_NAME }}
+            - bjoern5urban/doclytics:${{ env.BRANCH_NAME }}
+
           platforms: linux/amd64,linux/arm64
   release:
     runs-on: ubuntu-latest
