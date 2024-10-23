@@ -49,7 +49,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        registry: ['ghcr.io/b-urb/doclytics', '${{ secrets.DOCKERHUB_USERNAME }}/doclytics']
+        registry: ['ghcr.io/b-urb/doclytics', 'bjoern5urban/doclytics']
     permissions:
       packages: write
       contents: read
