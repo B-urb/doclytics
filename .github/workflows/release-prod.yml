@@ -24,12 +24,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install Rust
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@master
         with:
           toolchain: stable
           target: ${{ matrix.target }}
-          profile: minimal
-          override: true
       - name: Install cargo-edit
         run: |
           cargo install cargo-edit
