@@ -74,9 +74,9 @@ jobs:
         with:
           context: .
           push: true
-          tags:
-            - ghcr.io/b-urb/doclytics:${{ env.BRANCH_NAME }}
-            - bjoern5urban/doclytics:${{ env.BRANCH_NAME }}
+          tags: |
+            ghcr.io/b-urb/doclytics:${{ env.BRANCH_NAME }}
+            bjoern5urban/doclytics:${{ env.BRANCH_NAME }}
 
           platforms: linux/amd64,linux/arm64
   release:
