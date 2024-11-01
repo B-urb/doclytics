@@ -3,8 +3,10 @@ on:
   push:
     branches:
       - 'v[0-9]+.[0-9]+.[0-9]+-rc.[0-9]+'
+      - '[0-9]+.[0-9]+.[0-9]+-rc.[0-9]+'
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+-rc.[0-9]+'
+      - '[0-9]+.[0-9]+.[0-9]+-rc.[0-9]+'
 env:
   CI: true
 
@@ -24,16 +26,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install Rust
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@master
         with:
           toolchain: stable
           target: ${{ matrix.target }}
-          profile: minimal
-          override: true
+      - name: Install cargo-edit
+        run: |
+          cargo install cargo-edit
+      - name: Update Cargo Version
+        env:
+          VERSION: ${{ github.head_ref || github.ref_name }}
+        run: cargo set-version ${{ env.VERSION }}
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG_NAME: ${{ github.ref }} # Assumes the tag name is the same as the ref. Adjust if necessary.
@@ -64,6 +71,8 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Build and push
         uses: docker/build-push-action@v6
+        env:
+          VERSION: ${{ github.head_ref || github.ref_name }}
         with:
           context: .
           push: true
@@ -76,9 +85,11 @@ jobs:
           username: ${{github.actor}}
           password: ${{secrets.GITHUB_TOKEN}}
       - name: Build and push to GitHub Container Registry
+        env:
+          VERSION: ${{ github.head_ref || github.ref_name }}
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
-          tags: ghcr.io/b-urb/doclytics:${{ env.BRANCH_NAME }}
+          tags: ghcr.io/b-urb/doclytics:v${{ env.BRANCH_NAME }}
           platforms: linux/amd64,linux/arm64

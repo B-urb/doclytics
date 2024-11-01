@@ -32,16 +32,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install Rust
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@master
         with:
           toolchain: stable
           target: ${{ matrix.target }}
-          profile: minimal
-          override: true
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: doclytics-${{ env.BRANCH_NAME }}-${{ matrix.os }}
           path: |
@@ -65,13 +63,6 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Build and push
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/doclytics:${{ env.BRANCH_NAME }}
-          platforms: linux/amd64,linux/arm64
       - name: 'Login to GitHub Container Registry'
         uses: docker/login-action@v3
         with:
@@ -83,7 +74,10 @@ jobs:
         with:
           context: .
           push: true
-          tags: ghcr.io/b-urb/doclytics:${{ env.BRANCH_NAME }}
+          tags: |
+            ghcr.io/b-urb/doclytics:${{ env.BRANCH_NAME }}
+            bjoern5urban/doclytics:${{ env.BRANCH_NAME }}
+
           platforms: linux/amd64,linux/arm64
   release:
     runs-on: ubuntu-latest
