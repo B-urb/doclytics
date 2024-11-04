@@ -4,6 +4,7 @@ mod logger;
 mod paperless_defaultfields;
 mod util;
 mod error;
+mod server;
 
 use ollama_rs::{
     Ollama,
@@ -22,6 +23,7 @@ use crate::llm_api::generate_response;
 use crate::paperless::{get_data_from_paperless, get_default_fields, get_next_data_from_paperless, query_custom_fields, update_document_fields, PaperlessDefaultFieldType};
 use substring::Substring;
 use crate::paperless_defaultfields::extract_default_fields;
+use crate::server::init_server;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct Document {
@@ -257,7 +259,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let default_filter = env::var("PAPERLESS_FILTER").unwrap_or_else(|_| "NOT tagged=true".to_string());
 
+    //TODO: IF enabled
+    let router = init_server().await;
+
+    let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}",3000)).await.unwrap();
+    axum::serve(listener, router).await.unwrap();
     process_documents(&client, &ollama, &model, &base_url, default_filter.as_str()).await
+    
 }
 
 fn extract_json_object(input: &str) -> Result<String, String> {
