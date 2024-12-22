@@ -1,38 +1,14 @@
+use crate::types::{
+    CustomField, DefaultField, Document, Field, Mode, PaperlessDefaultFieldType, Response,
+};
+use crate::util::normalize_string;
+use reqwest::Client;
+use serde::de::{DeserializeOwned, StdError};
+use serde::{Deserialize, Serialize};
+use serde_json::{Map, Value};
 use std::collections::HashMap;
 use std::fmt;
 use std::fmt::Debug;
-use reqwest::Client;
-use serde::de::{DeserializeOwned, StdError};
-use serde_json::{Map, Value};
-use crate::{CustomField, Document, Field, Mode, Response};
-use serde::{Deserialize, Serialize};
-use crate::util::normalize_string;
-
-#[derive(Clone, Copy)]
-pub enum PaperlessDefaultFieldType {
-    Tag,
-    DocumentType,
-    Correspondent,
-}
-
-impl PaperlessDefaultFieldType {
-    fn to_string(self) -> &'static str {
-        match self {
-            PaperlessDefaultFieldType::Tag => "tags",
-            PaperlessDefaultFieldType::DocumentType => "document_types",
-            PaperlessDefaultFieldType::Correspondent => "correspondents",
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct DefaultField {
-    #[serde(skip_serializing_if = "Option::is_none")] // Skip `id` if it's None
-    id: Option<u32>,
-    slug: String,
-    name: String,
-    matching_algorithm: u8,
-}
 
 pub async fn get_data_from_paperless(
     client: &Client,
@@ -42,9 +18,15 @@ pub async fn get_data_from_paperless(
     // Read token from environment
     //Define filter string
     let filter = filter;
-    slog_scope::info!("Retrieve Documents from paperless at: {}, with query: {}",url, filter);
-    let response = client.get(format!("{}/api/documents/?query={}", url, filter)).send().await?;
-
+    slog_scope::info!(
+        "Retrieve Documents from paperless at: {}, with query: {}",
+        url,
+        filter
+    );
+    let response = client
+        .get(format!("{}/api/documents/?query={}", url, filter))
+        .send()
+        .await?;
 
     let response_result = response.error_for_status();
     match response_result {
@@ -65,21 +47,21 @@ pub async fn get_data_from_paperless(
             parse_document_response(json)
         }
         Err(e) => {
-            slog_scope::error!("Error while fetching documents from paperless: {}",e);
+            slog_scope::error!("Error while fetching documents from paperless: {}", e);
             Err(e.into())
         }
     }
 }
 
-pub async fn get_next_data_from_paperless(client: &Client,
-                                          url: &str,
+pub async fn get_next_data_from_paperless(
+    client: &Client,
+    url: &str,
 ) -> Result<Response<Document>, Box<dyn StdError + Send + Sync>> {
     // Read token from environment
     //Define filter string
     slog_scope::info!("Retrieve next page {}", url);
     let response = client.get(format!("{}", url)).send().await?;
 
-
     let response_result = response.error_for_status();
     match response_result {
         Ok(data) => {
@@ -99,14 +81,15 @@ pub async fn get_next_data_from_paperless(client: &Client,
             parse_document_response(json)
         }
         Err(e) => {
-            slog_scope::error!("Error while fetching documents from paperless: {}",e);
+            slog_scope::error!("Error while fetching documents from paperless: {}", e);
             Err(e.into())
         }
     }
 }
 
-
-pub fn parse_document_response(json: &str) -> Result<Response<Document>, Box<dyn StdError + Send + Sync>> {
+pub fn parse_document_response(
+    json: &str,
+) -> Result<Response<Document>, Box<dyn StdError + Send + Sync>> {
     let data: Result<Response<Document>, _> = serde_json::from_str(json);
     match data {
         Ok(data) => {
@@ -117,7 +100,10 @@ pub fn parse_document_response(json: &str) -> Result<Response<Document>, Box<dyn
             let column = e.column();
             let start = (column as isize - 30).max(0) as usize;
             let end = (column + 30).min(json.len());
-            slog_scope::error!("Error while creating json of document response from paperless {}", e);
+            slog_scope::error!(
+                "Error while creating json of document response from paperless {}",
+                e
+            );
             slog_scope::error!("Error at column {}: {}", column, &json[start..end]);
             slog_scope::trace!("Error occured in json {}", &json);
             Err(e.into()) // Remove the semicolon here
@@ -171,8 +157,7 @@ pub async fn get_default_fields(
     client: &Client,
     base_url: &str,
     endpoint: PaperlessDefaultFieldType,
-) -> Result<Vec<DefaultField>, Box<dyn std::error::Error>>
-{
+) -> Result<Vec<DefaultField>, Box<dyn std::error::Error>> {
     slog_scope::info!("Fetching custom fields from paperless at {}", base_url);
     let res = client
         .get(format!("{}/api/{}/", base_url, endpoint.to_string()))
@@ -253,14 +238,17 @@ pub async fn update_document_fields(
                     data_type: "Text".to_string(),
                     default_value: None,
                 };
-                match create_custom_field(client, &create_field, base_url).await
-                {
+                match create_custom_field(client, &create_field, base_url).await {
                     Ok(new_field) => {
                         let custom_field = convert_field_to_custom_field(value, &new_field);
                         custom_fields.push(custom_field)
                     }
                     Err(e) => {
-                        slog_scope::error!("Error: {} creating custom field: {}, skipping...",e, key)
+                        slog_scope::error!(
+                            "Error: {} creating custom field: {}, skipping...",
+                            e,
+                            key
+                        )
                     }
                 }
             }
@@ -270,8 +258,14 @@ pub async fn update_document_fields(
 
     let mut payload = serde_json::Map::new();
 
-    payload.insert("custom_fields".to_string(), serde_json::json!(custom_fields));
-    if let Some(value) = metadata.get("title").and_then(|v| v.as_ref().and_then(|v| v.as_str())) {
+    payload.insert(
+        "custom_fields".to_string(),
+        serde_json::json!(custom_fields),
+    );
+    if let Some(value) = metadata
+        .get("title")
+        .and_then(|v| v.as_ref().and_then(|v| v.as_str()))
+    {
         payload.insert("title".to_string(), serde_json::json!(value));
     }
     if payload.is_empty() {
@@ -303,7 +297,7 @@ pub async fn update_document_fields(
 
 /// This function update the default fields like tags, correspondents and document_types in paperless
 /// it is checked if a field exists on the server and if not, it is created
-/// 
+///
 pub async fn update_document_default_fields(
     client: &Client,
     document_id: u32,
@@ -316,8 +310,10 @@ pub async fn update_document_default_fields(
     let mut default_field_ids = Vec::new();
 
     for value in data {
-
-        if let Some(field) = fields.iter().find(|&f| normalize_string(&*f.name) == normalize_string(&*value)) {
+        if let Some(field) = fields
+            .iter()
+            .find(|&f| normalize_string(&*f.name) == normalize_string(&*value))
+        {
             let default_field_id = field.id;
             default_field_ids.push(default_field_id);
         } else {
@@ -329,13 +325,14 @@ pub async fn update_document_default_fields(
                     slug: value.clone(),
                     matching_algorithm: 6,
                 };
-                match create_default_field(client, &create_field, base_url, endpoint).await
-                {
-                    Ok(new_field) => {
-                        default_field_ids.push(new_field.id)
-                    }
+                match create_default_field(client, &create_field, base_url, endpoint).await {
+                    Ok(new_field) => default_field_ids.push(new_field.id),
                     Err(e) => {
-                        slog_scope::error!("Error: {} creating custom field: {}, skipping...",e, value)
+                        slog_scope::error!(
+                            "Error: {} creating custom field: {}, skipping...",
+                            e,
+                            value
+                        )
                     }
                 }
             }
@@ -343,11 +340,14 @@ pub async fn update_document_default_fields(
     }
 
     let mut payload = serde_json::Map::new();
-    payload.insert(endpoint.to_string().to_string(), serde_json::json!(default_field_ids));
+    payload.insert(
+        endpoint.to_string().to_string(),
+        serde_json::json!(default_field_ids),
+    );
 
     if payload.is_empty() {
         slog_scope::warn!("{}", "payload is empty, not updating fields");
-        return None
+        return None;
     }
     let url = format!("{}/api/documents/{}/", base_url, document_id);
     slog_scope::info!("Updating document with ID: {}", document_id);
@@ -394,7 +394,6 @@ pub async fn create_custom_field(
     // Define the URL for creating a custom field
     let url = format!("{}/api/custom_fields/", base_url);
 
-
     // Send the request to create the custom field
     let res = client.post(&url).json(&field).send().await?;
     let response_result = res.error_for_status();
@@ -429,7 +428,6 @@ pub async fn create_default_field(
     // Define the URL for creating a custom field
     let url = format!("{}/api/{}/", base_url, endpoint.to_string());
 
-
     // Send the request to create the custom field
     let res = client.post(&url).json(&field).send().await?;
     let response_result = res.error_for_status();
@@ -461,4 +459,3 @@ fn map_to_string(map: &Map<String, Value>) -> String {
         .collect::<Vec<String>>()
         .join(", ")
 }
-

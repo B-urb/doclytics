@@ -4,8 +4,8 @@ use axum::{
     http::StatusCode,
     Json, Router,
 };
-use serde::{Deserialize};
-use tracing_subscriber::fmt::format;
+use serde::Deserialize;
+
 
 #[derive(Deserialize)]
 struct UpdateDocumentRequest {
@@ -26,6 +26,7 @@ async fn update_document(
     Json(payload): Json<UpdateDocumentRequest>,
 ) -> StatusCode
 {
+    process_documents_batch(, ollama, model, prompt_base, client, fields, base_url, mode)
 
     // this will be converted into a JSON response
     // with a status code of `201 Created`
