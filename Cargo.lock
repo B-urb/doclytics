@@ -706,9 +706,9 @@ dependencies = [
 
 [[package]]
 name = "ollama-rs"
-version = "0.2.4"
+version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "af32a0936dcb0945f2436d60663e2a7df8cb944c82efbcb2e67ad2ce3662f43a"
+checksum = "269d1ec6f5f1b7a7b7413ab7eacb65177462f086293b4039bc43ee8bbed53836"
 dependencies = [
  "async-stream",
  "log",
@@ -716,6 +716,7 @@ dependencies = [
  "schemars",
  "serde",
  "serde_json",
+ "static_assertions",
  "thiserror 2.0.11",
  "url",
 ]
@@ -1213,6 +1214,12 @@ name = "spin"
 version = "0.9.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6980e8d7511241f8acf4aebddbb1ff938df5eebe98691418c4468d0b72a96a67"
+
+[[package]]
+name = "static_assertions"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
 name = "substring"
