@@ -1,7 +1,7 @@
 use crate::llm_api::generate_response;
 use crate::paperless::{
-    get_data_from_paperless, get_default_fields, get_next_data_from_paperless, query_custom_fields,
-    update_document_fields,
+    get_data_from_paperless, get_default_fields, get_document_by_id, get_next_data_from_paperless,
+    query_custom_fields, update_document_fields,
 };
 use crate::paperless_defaultfields::extract_default_fields;
 use crate::types::{Document, Field, Mode, PaperlessDefaultFieldType};
@@ -11,6 +11,34 @@ use ollama_rs::Ollama;
 use reqwest::Client;
 use std::env;
 
+pub async fn process_document_by_id(
+    document: &Document,
+    ollama: &Ollama,
+    model: &str,
+    prompt_base: &String,
+    client: &Client,
+    fields: &Vec<Field>,
+    base_url: &str,
+    mode: Mode,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let tag_mode = create_mode_from_env("DOCLYTICS_TAGS");
+    let doctype_mode = create_mode_from_env("DOCLYTICS_DOCTYPE");
+    let correspondent_mode = create_mode_from_env("DOCLYTICS_CORRESPONDENT");
+    
+
+
+    generate_response_and_extract_data(
+        ollama,
+        &model,
+        &prompt_base,
+        client,
+        &fields,
+        base_url,
+        mode,
+        &document,
+    )
+    .await;
+}
 pub async fn process_documents_batch(
     documents: &Vec<Document>,
     ollama: &Ollama,

@@ -1,14 +1,34 @@
-use crate::types::{
-    CustomField, DefaultField, Document, Field, Mode, PaperlessDefaultFieldType, Response,
-};
-use crate::util::normalize_string;
-use reqwest::Client;
+use crate::types::{CustomField, DefaultField, Document, Field, Mode, PaperlessClient, PaperlessDefaultFieldType, Response};
+use crate::util::{create_mode_from_env, normalize_string};
+use reqwest::{Client, Error};
 use serde::de::{DeserializeOwned, StdError};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use std::collections::HashMap;
 use std::fmt;
 use std::fmt::Debug;
+
+
+impl PaperlessClient {
+    pub fn new(client: Client, base_url: &str) -> Self {
+        PaperlessClient {
+            client,
+            base_url: base_url.to_string(),
+            mode: create_mode_from_env("MODE"),
+            tag_mode: create_mode_from_env("DOCLYTICS_TAGS"),
+            doctype_mode: create_mode_from_env("DOCLYTICS_DOCTYPE"),
+            correspondent_mode: create_mode_from_env("DOCLYTICS_CORRESPONDENT"),
+            default_fields: None,
+            fields: None,
+        }
+    }
+    pub async fn make_paperless_request(&self, endpoint: &str) -> Result<reqwest::Response, Error> {
+        self.client
+            .get(format!("{}/api/documents/{}", &self.base_url, endpoint))
+            .send()
+            .await
+    }
+}
 
 pub async fn get_data_from_paperless(
     client: &Client,
@@ -44,6 +64,40 @@ pub async fn get_data_from_paperless(
             //let error_part = value.pointer("/results/0").unwrap();
             //println!("Error part: {}", error_part);
             // Parse the JSON string into the Response struct
+            parse_document_response(json)
+        }
+        Err(e) => {
+            slog_scope::error!("Error while fetching documents from paperless: {}", e);
+            Err(e.into())
+        }
+    }
+}
+
+pub async fn get_document_by_id(
+    client: &Client,
+    url: &str,
+    id: &str,
+) -> Result<Response<Document>, Box<dyn StdError + Send + Sync>> {
+    // Read token from environment
+    //Define filter string
+    slog_scope::info!(
+        "Retrieve Document from paperless at: {}, with id: {}",
+        url,
+        id
+    );
+    
+    let response = client
+        .get(format!("{}/api/documents/{}", url, id))
+        .send()
+        .await?;
+
+    let response_result = response.error_for_status();
+    match response_result {
+        Ok(data) => {
+            let body = data.text().await?;
+            slog_scope::trace!("Response from server while fetching documents: {}", body);
+
+            let json = body.trim_start_matches("Document content: ");
             parse_document_response(json)
         }
         Err(e) => {

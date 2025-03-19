@@ -1,5 +1,9 @@
+use std::sync::Arc;
+use ollama_rs::Ollama;
+use reqwest::{Client, Error};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use crate::util::create_mode_from_env;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Document {
@@ -86,4 +90,30 @@ pub struct DefaultField {
     pub slug: String,
     pub name: String,
     pub matching_algorithm: u8,
+}
+
+pub struct PaperlessClient {
+    pub client: Client,
+    pub mode: Mode,
+    pub tag_mode: Mode,
+    pub doctype_mode: Mode,
+    pub correspondent_mode: Mode,
+    pub default_fields: Option<Vec<DefaultField>>,
+    pub fields: Option<Vec<DefaultField>>,
+    pub base_url: String,
+}
+
+
+
+
+pub struct OllamaClient {
+    pub ollama: Ollama,
+    pub model: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct ServerConfig<'a> {
+    pub paperless_client: &'a PaperlessClient,
+    pub ollama: &'a Ollama
+    pub model:
 }

@@ -16,6 +16,7 @@ use std::result::Result;
 use crate::server::init_server;
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION};
 use std::env;
+use crate::types::ServerConfig;
 
 // Initialize the HTTP client with Paperless API token and base URL
 fn init_paperless_client(token: &str) -> Client {
@@ -67,9 +68,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let default_filter =
         env::var("PAPERLESS_FILTER").unwrap_or_else(|_| "NOT tagged=true".to_string());
+   
+    let server_config = ServerConfig { client: &client, url: &base_url};
 
     //TODO: IF enabled
-    let router = init_server().await;
+    let router = init_server(server_config).await;
 
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", 3000))
         .await
